@@ -1,0 +1,139 @@
+.newsletter-section {
+  width: 100%;
+  padding: 50px 20px;
+  background: linear-gradient(135deg, #ffc500 0%, #ffe680 100%);
+}
+
+.newsletter-container {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.newsletter-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.newsletter-container h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.newsletter-container p {
+  font-size: 14px;
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+.newsletter-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.newsletter-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.newsletter-input:focus {
+  border-color: var(--primary-navy);
+}
+
+.newsletter-input::placeholder {
+  color: var(--text-light);
+}
+
+.newsletter-btn {
+  padding: 12px 28px;
+  background-color: var(--primary-navy);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.newsletter-btn:hover {
+  background-color: #142a5a;
+  transform: translateY(-2px);
+}
+
+.success-message {
+  color: var(--success-green);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Tablet Styles */
+@media (max-width: 768px) {
+  .newsletter-section {
+    padding: 40px 15px;
+  }
+
+  .newsletter-container h2 {
+    font-size: 22px;
+  }
+
+  .newsletter-form {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .newsletter-input {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .newsletter-btn {
+    padding: 10px 24px;
+    font-size: 13px;
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 480px) {
+  .newsletter-section {
+    padding: 30px 12px;
+  }
+
+  .newsletter-icon {
+    font-size: 32px;
+  }
+
+  .newsletter-container h2 {
+    font-size: 18px;
+  }
+
+  .newsletter-container p {
+    font-size: 12px;
+  }
+
+  .newsletter-form {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .newsletter-input {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .newsletter-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}

@@ -1,0 +1,154 @@
+.why-choose-section {
+  width: 100%;
+  padding: 50px 20px;
+  background-color: #ffffff;
+}
+
+.why-choose-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.why-choose-container h2 {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 10px;
+}
+
+.why-choose-container > p {
+  font-size: 16px;
+  color: var(--text-light);
+  margin-bottom: 40px;
+}
+
+.why-choose-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.why-item {
+  padding: 30px 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  text-align: center;
+}
+
+.why-item:hover {
+  background-color: var(--primary-yellow);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.why-icon {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.why-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.why-item h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.why-item p {
+  font-size: 14px;
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+/* Tablet Styles */
+@media (max-width: 768px) {
+  .why-choose-section {
+    padding: 40px 15px;
+  }
+
+  .why-choose-container h2 {
+    font-size: 20px;
+  }
+
+  .why-choose-container > p {
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+
+  .why-choose-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .why-item {
+    padding: 20px 16px;
+  }
+
+  .why-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .why-item h3 {
+    font-size: 16px;
+  }
+
+  .why-item p {
+    font-size: 12px;
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 480px) {
+  .why-choose-section {
+    padding: 30px 12px;
+  }
+
+  .why-choose-container h2 {
+    font-size: 16px;
+  }
+
+  .why-choose-container > p {
+    font-size: 12px;
+    margin-bottom: 20px;
+  }
+
+  .why-choose-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .why-item {
+    padding: 16px 12px;
+  }
+
+  .why-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .why-item h3 {
+    font-size: 14px;
+  }
+
+  .why-item p {
+    font-size: 11px;
+  }
+}
