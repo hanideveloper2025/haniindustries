@@ -6,7 +6,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer-content">
         <div className="footer-section">
-          <h3>HANI'S INDUSTRIES, YOUR TRUSTED WELLNESS COMPANION</h3>
+          <h3>HANI INDUSTRIES, YOUR TRUSTED WELLNESS COMPANION</h3>
           <div className="footer-logo">
             <img src="/hani-logo.png" alt="Hani's Industries" />
           </div>
