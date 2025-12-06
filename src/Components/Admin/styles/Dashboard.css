@@ -1,5 +1,6 @@
 /* Dashboard Container */
 .dashboard-container {
+    margin-top: 50px;
   animation: fadeIn 0.3s ease;
 }
 

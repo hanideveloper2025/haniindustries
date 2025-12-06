@@ -1,5 +1,6 @@
 /* Add Featured Product Form Styles */
 .featured-container {
+  margin-top: 50px;
   animation: slideIn 0.3s ease;
 }
 

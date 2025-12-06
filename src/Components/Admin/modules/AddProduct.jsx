@@ -10,7 +10,9 @@ export default function AddProduct() {
     productId: "",
     productName: "",
     category: "",
+    ratings: "",
     price: "",
+    originalPrice: "",
     discount: "",
     stock: "",
     description: "",
@@ -23,11 +25,23 @@ export default function AddProduct() {
 
   const [successMessage, setSuccessMessage] = useState("")
   const [imagePreview, setImagePreview] = useState(null)
+  const [ratingError, setRatingError] = useState("")
   const [addedProducts, setAddedProducts] = useState([])
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+
+    if (name === "ratings") {
+      const ratingValue = parseFloat(value)
+      if (ratingValue > 5) {
+        setRatingError("Rating cannot be more than 5")
+      } else {
+        setRatingError("")
+      }
+      setFormData((prev) => ({ ...prev, [name]: value }))
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }))
+    }
   }
 
   const handleFileChange = (e) => {
@@ -58,7 +72,9 @@ export default function AddProduct() {
       productId: "",
       productName: "",
       category: "",
+      ratings: "",
       price: "",
+      originalPrice: "",
       discount: "",
       stock: "",
       description: "",
@@ -118,6 +134,23 @@ export default function AddProduct() {
                 {/* <option value="packaging">Packaging</option> */}
               </select>
             </div>
+
+            <div className="form-group">
+              <label htmlFor="ratings">Ratings *</label>
+              <input
+                type="number"
+                id="ratings"
+                name="ratings"
+                value={formData.ratings}
+                onChange={handleChange}
+                placeholder="0.0"
+                min="0"
+                max="5"
+                step="0.1"
+                required
+              />
+              {ratingError && <span className="error-message">{ratingError}</span>}
+            </div>
           </div>
 
           <div className="form-row">
@@ -135,7 +168,21 @@ export default function AddProduct() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="discount">Discount (%) *</label>
+              <label htmlFor="originalPrice">Original Price (₹)</label>
+              <input
+                type="number"
+                id="originalPrice"
+                name="originalPrice"
+                value={formData.originalPrice}
+                onChange={handleChange}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="discount">Discount (%)</label>
               <input
                 type="number"
                 id="discount"
@@ -184,7 +231,12 @@ export default function AddProduct() {
             <div className="file-input-wrapper">
               <input type="file" id="image" name="image" onChange={handleFileChange} accept="image/*" required ref={fileInputRef} />
               <span className="file-label" onClick={() => fileInputRef.current.click()}>{formData.image ? formData.image.name : "Choose image file..."}</span>
-              {imagePreview && <img src={imagePreview} alt="Preview" className="image-preview" />}
+              {imagePreview && (
+                <div className="image-preview-container">
+                  <img src={imagePreview} alt="Preview" className="image-preview" />
+                  <button type="button" className="close-preview" style={{ fontSize: '24px', fontWeight: 'bold' }} onClick={() => { setImagePreview(null); setFormData((prev) => ({ ...prev, image: null })); fileInputRef.current.value = ''; }}>×</button>
+                </div>
+              )}
             </div>
           </div>
 

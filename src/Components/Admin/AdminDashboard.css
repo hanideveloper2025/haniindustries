@@ -16,7 +16,10 @@
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 8px rgba(0, 31, 63, 0.15);
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   z-index: 1000;
 }
 
@@ -117,8 +120,10 @@
 .admin-content {
   flex: 1;
   padding: 2rem;
+  padding-top: 6rem;
   background-color: #f8f9fa;
   overflow-y: auto;
+  margin-left: 280px;
 }
 
 /* Left Side Menu */
@@ -129,6 +134,11 @@
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 8px rgba(0, 31, 63, 0.08);
+  position: fixed;
+  top: 6rem;
+  left: 0;
+  height: calc(100vh - 6rem);
+  z-index: 999;
 }
 
 .menu-nav {
@@ -252,6 +262,7 @@
 
   .admin-content {
     padding: 1.5rem;
+    margin-left: 250px;
   }
 }
 
