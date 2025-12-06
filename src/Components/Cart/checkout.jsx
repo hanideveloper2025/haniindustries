@@ -159,7 +159,7 @@ function CheckoutPage() {
                   />
                 </div>
                 <div className="form-field">
-                  <label htmlFor="phone">Phone Number</label>
+                  <label htmlFor="phone">Phone Number </label>
                   <input
                     type="tel"
                     id="phone"
