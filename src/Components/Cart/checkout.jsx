@@ -12,6 +12,7 @@ function CheckoutPage() {
   const [selectedOnlinePayment, setSelectedOnlinePayment] = useState("")
   const [lastSelectedOnlinePayment, setLastSelectedOnlinePayment] = useState("")
   const [showQRCode, setShowQRCode] = useState(false)
+  const [orderId, setOrderId] = useState("")
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -39,6 +40,14 @@ function CheckoutPage() {
     const { name, value } = e.target
     setCardData({ ...cardData, [name]: value })
   }
+
+  // Generate order ID on component mount
+  useEffect(() => {
+    const lastOrderNumber = localStorage.getItem('lastOrderNumber') || 0
+    const nextOrderNumber = parseInt(lastOrderNumber) + 1
+    const newOrderId = `ORD${nextOrderNumber.toString().padStart(3, '0')}`
+    setOrderId(newOrderId)
+  }, [])
 
   // Reset online payment selection and QR code when payment method changes
   useEffect(() => {
@@ -74,6 +83,10 @@ function CheckoutPage() {
       alert("Please select an online payment method")
       return
     }
+
+    // Update localStorage with the current order number to ensure uniqueness
+    const currentOrderNumber = parseInt(orderId.replace('ORD', ''))
+    localStorage.setItem('lastOrderNumber', currentOrderNumber.toString())
 
     if (selectedPayment === "online") {
       setShowQRCode(true)
@@ -387,6 +400,9 @@ function CheckoutPage() {
         {/* Order Summary Sidebar */}
         <aside className="checkout-summary">
           <h2>Order Summary</h2>
+          <div className="order-id-display">
+            <span>Order ID: {orderId}</span>
+          </div>
 
           <div className="summary-items">
             {cartItems.map((item) => (
