@@ -23,7 +23,7 @@ const AdminLogin = () => {
         localStorage.setItem("adminAuthenticated", "true")
         localStorage.setItem("adminUsername", username)
         // Navigate to admin dashboard
-        navigate("/Admin")
+        navigate("/admin")
       } else {
         setError("Invalid username or password. Please try again.")
         setPassword("")
