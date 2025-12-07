@@ -20,7 +20,7 @@ function WhyChooseUs() {
             <div className="why-icon">
               <img src="/quality-guarantee.jpg" alt="Quality" />
             </div>
-            <h3>Consistent Quality Every Time</h3>
+            <h3>Quality Every Time</h3>
             <p>From lamp oil to cleaners, we maintain strict quality standards for every batch produced.</p>
           </div>
 

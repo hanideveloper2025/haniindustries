@@ -21,11 +21,11 @@ function Header() {
 
           <div className="search-bar">
             <input type="text" placeholder="Search for..." />
-            <button className="search-btn">🔍</button>
+            <button className="search-btn"><img src="/search.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /></button>
           </div>
 
           <div className="header-actions">
-            <Link to="/cart" className="cart-btn"><span style={{ fontSize: '1.5em' }}>🛒</span> <span style={{ backgroundColor: 'red', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '0.8em', marginLeft: '5px' }}>{getCartCount()}</span></Link>
+            <Link to="/cart" className="cart-btn"><img src="/cart.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /> <span style={{ backgroundColor: 'red', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '0.8em' , margin: '5px' }}>{getCartCount()}</span></Link>
           </div>
 
           <button
