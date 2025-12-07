@@ -35,7 +35,7 @@ const featuredProducts = [
     price: 260,
     originalPrice: 430,
     image: "/Products/oils/idhayam_oil_1000ml_-removebg-preview.png",
-    rating: 4.3,
+    rating: 4.4,
     reviews: 95,
     discount: 12,
     badge: "sale",
