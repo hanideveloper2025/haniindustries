@@ -13,6 +13,18 @@
 - [x] Update handlePlaceOrder function to validate online payment selection
 - [x] Add CSS styling for QR code section and selected payment method highlighting
 
+## Add Delete and Edit Buttons to Featured Products Table (Completed)
+- [x] Add editingId state to track which product is being edited
+- [x] Implement handleDelete function to remove products from state
+- [x] Implement handleEdit function to populate form with product data
+- [x] Update handleSubmit to handle both adding and updating products
+- [x] Add "Actions" column to table header
+- [x] Add Edit and Delete buttons to each table row
+- [x] Add CSS styles for action buttons (.btn-edit, .btn-delete)
+- [x] Update button text to reflect add/update mode
+- [x] Implement handleReset function for proper form clearing
+- [x] Update Clear Form button to use onClick handler
+
 ## Status
 - [x] Plan approved by user
 - [x] Implementation completed

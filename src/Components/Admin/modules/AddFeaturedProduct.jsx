@@ -17,6 +17,7 @@ export default function AddFeaturedProduct() {
   const [imagePreview, setImagePreview] = useState("")
   const [ratingError, setRatingError] = useState("")
   const [featuredProducts, setFeaturedProducts] = useState([])
+  const [editingId, setEditingId] = useState(null)
 
   const handleChange = (e) => {
     const { name, value, files } = e.target
@@ -40,18 +41,76 @@ export default function AddFeaturedProduct() {
     }
   }
 
+  const handleDelete = (id) => {
+    setFeaturedProducts((prev) => prev.filter((product) => product.id !== id))
+  }
+
+  const handleEdit = (product) => {
+    setFormData({
+      productName: product.productName,
+      ratings: product.ratings || "",
+      price: product.price,
+      reviewNo: product.reviewNo,
+      originalPrice: product.originalPrice,
+      productImage: "",
+      discount: product.discount || "",
+    })
+    setImagePreview(product.image)
+    setEditingId(product.id)
+  }
+
+  const handleReset = () => {
+    setFormData({
+      productName: "",
+      ratings: "",
+      price: "",
+      reviewNo: "",
+      originalPrice: "",
+      productImage: "",
+      discount: "",
+    })
+    setImagePreview("")
+    setRatingError("")
+    setEditingId(null)
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
-    const newProduct = {
-      id: Date.now(),
-      productName: formData.productName,
-      price: formData.price,
-      originalPrice: formData.originalPrice,
-      reviewNo: formData.reviewNo,
-      image: imagePreview,
+    if (editingId) {
+      // Update existing product
+      setFeaturedProducts((prev) =>
+        prev.map((product) =>
+          product.id === editingId
+            ? {
+                ...product,
+                productName: formData.productName,
+                ratings: formData.ratings,
+                price: formData.price,
+                originalPrice: formData.originalPrice,
+                reviewNo: formData.reviewNo,
+                discount: formData.discount,
+                image: imagePreview || product.image,
+              }
+            : product
+        )
+      )
+      setSuccessMessage("Featured product updated successfully!")
+      setEditingId(null)
+    } else {
+      // Add new product
+      const newProduct = {
+        id: Date.now(),
+        productName: formData.productName,
+        ratings: formData.ratings,
+        price: formData.price,
+        originalPrice: formData.originalPrice,
+        reviewNo: formData.reviewNo,
+        discount: formData.discount,
+        image: imagePreview,
+      }
+      setFeaturedProducts((prev) => [...prev, newProduct])
+      setSuccessMessage("Featured product added successfully!")
     }
-    setFeaturedProducts((prev) => [...prev, newProduct])
-    setSuccessMessage("Featured product added successfully!")
     setTimeout(() => setSuccessMessage(""), 3000)
     setFormData({
       productName: "",
@@ -188,9 +247,9 @@ export default function AddFeaturedProduct() {
 
         <div className="form-actions">
           <button type="submit" className="btn-primary">
-            Add Featured Product
+            {editingId ? "Update Featured Product" : "Add Featured Product"}
           </button>
-          <button type="reset" className="btn-secondary">
+          <button type="button" onClick={handleReset} className="btn-secondary">
             Clear Form
           </button>
         </div>
@@ -207,6 +266,7 @@ export default function AddFeaturedProduct() {
                 <th>Price</th>
                 <th>Original Price</th>
                 <th>Review No.</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -219,6 +279,14 @@ export default function AddFeaturedProduct() {
                   <td>${product.price}</td>
                   <td>${product.originalPrice}</td>
                   <td>{product.reviewNo}</td>
+                  <td>
+                    <button className="btn-edit" onClick={() => handleEdit(product)}>
+                      Edit
+                    </button>
+                    <button className="btn-delete" onClick={() => handleDelete(product.id)}>
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
