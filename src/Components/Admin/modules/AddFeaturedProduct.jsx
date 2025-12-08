@@ -196,7 +196,7 @@ export default function AddFeaturedProduct() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="originalPrice">Original Price *</label>
+              <label htmlFor="originalPrice">MRP *</label>
               <input
                 type="number"
                 id="originalPrice"

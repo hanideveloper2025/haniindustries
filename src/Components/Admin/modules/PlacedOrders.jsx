@@ -160,10 +160,10 @@ export default function PlacedOrders() {
                         <label>Order Date:</label>
                         <p>{order.orderDate}</p>
                       </div>
-                      <div className="timeline-item">
+                      {/* <div className="timeline-item">
                         <label>Expected Delivery:</label>
                         <p>{order.expectedDelivery}</p>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 
@@ -197,9 +197,13 @@ export default function PlacedOrders() {
 
                   {/* Action Buttons */}
                   <div className="action-buttons">
-                    <button className="btn-primary">Mark as Shipped</button>
-                    <button className="btn-secondary">Print Invoice</button>
-                    <button className="btn-secondary">Send Notification</button>
+                    {order.status !== "Completed" && (
+                      <>
+                        <button className="btn-primary">Mark as completed</button>
+                        {/* <button className="btn-secondary">Print Invoice</button> */}
+                        <button className="btn-secondary">Send dispatch Notification</button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

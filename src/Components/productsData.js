@@ -60,7 +60,7 @@ const featuredProducts = [
     ],
   },
   {
-    id: "HANI0003",
+    id: "HNAI0003",
     name: "DEVI OIL - 1L BOTTLE",
     price: 150,
     originalPrice: 300,

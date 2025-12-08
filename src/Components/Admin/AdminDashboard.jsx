@@ -129,7 +129,7 @@ export default function AdminDashboard({ onLogout }) {
                 </button>
               </li>
 
-              <li>
+              {/* <li>
                 <button
                   className={`menu-item ${activeModule === "payment" ? "active" : ""}`}
                   onClick={() => {
@@ -140,7 +140,7 @@ export default function AdminDashboard({ onLogout }) {
                   <span className="menu-icon">💳</span>
                   <span className="menu-text">Cart & Payment</span>
                 </button>
-              </li>
+              </li> */}
 
               <li>
                 <button

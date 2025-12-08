@@ -249,20 +249,39 @@
 
 /* Responsive Design */
 @media (max-width: 1024px) {
+  .menu-toggle {
+    display: flex;
+  }
+
   .admin-wrapper {
     flex-direction: row;
+    margin-left: 0;
   }
 
   .admin-menu {
+    position: fixed;
+    top: 0;
+    left: -250px;
     width: 250px;
+    height: 100vh;
+    z-index: 1001;
+    transition: left 0.3s ease;
     border-right: 1px solid #dee2e6;
-    border-top: none;
     box-shadow: 2px 0 8px rgba(0, 31, 63, 0.08);
+    padding-top: 120px;
+  }
+
+  .admin-menu.open {
+    left: 0;
   }
 
   .admin-content {
     padding: 1.5rem;
-    margin-left: 250px;
+    margin-left: 0;
+  }
+
+  .menu-close-btn {
+    display: flex;
   }
 }
 
@@ -276,7 +295,7 @@
     gap: 1rem;
     align-items: flex-start;
     padding: 1rem;
-    position: relative;
+    position: fixed;
     z-index: 1000;
   }
 
@@ -295,19 +314,19 @@
 
   .admin-content {
     padding: 1rem;
+    padding-top: 6rem;
   }
 
   .admin-menu {
     position: fixed;
-    top: 0;
+    top: 6rem;
     left: -280px;
     width: 280px;
-    height: 100vh;
+    height: calc(100vh - 6rem);
     z-index: 1001;
     transition: left 0.3s ease;
     border-right: 1px solid #dee2e6;
     box-shadow: 2px 0 8px rgba(0, 31, 63, 0.08);
-    padding-top: 120px; /* Space for header */
   }
 
   .admin-menu.open {
@@ -378,8 +397,8 @@
   }
 }
 
-/* Overlay for mobile menu */
-@media (max-width: 768px) {
+/* Overlay for mobile and tablet menu */
+@media (max-width: 1024px) {
   .menu-close-btn {
     display: flex;
   }
