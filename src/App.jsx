@@ -11,6 +11,7 @@ import AdminDashboard from "./Components/Admin/AdminDashboard"
 import AdminLogin from "./Components/Admin/Admin_login/AdminLogin"
 import PrivateRoute from "./Components/Admin/PrivateRoute"
 import Contact from "./Components/Contact"
+import ScrollToTop from "./Components/ScrollToTop"
 import "./App.css"
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
   return (
     <CartProvider>
       <Router>
+        <ScrollToTop />
         <Routes>
           {/* Admin Routes */}
           <Route path="/admin-login" element={<AdminLogin />} />

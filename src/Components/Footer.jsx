@@ -60,7 +60,7 @@ function Footer() {
 
         <div className="footer-section">
           <h4>Contact Info</h4>
-          <p>Email: hanisindustries2020@gmail.com</p>
+          <p>Email: haniidustries@gmail.com</p>
           <p>Phone: +91 93427 08080</p> 
           <p>Address: Plot No:44, 
                           Vaishnavi nagar

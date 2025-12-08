@@ -32,7 +32,7 @@ export const CartProvider = ({ children }) => {
       price: price,
       originalPrice: originalPrice,
       quantity: quantity,
-      image: product.images[0],
+      image: product.images ? product.images[0] : product.image,
       size: selectedSize,
     }
 

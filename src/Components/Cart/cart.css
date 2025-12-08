@@ -20,13 +20,16 @@
 .cart-container {
   max-width: 1200px;
   margin: 0 auto;
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
 }
 
 .cart-items-section {
   background-color: white;
   padding: 30px;
   border-radius: 8px;
-  margin-bottom: 30px;
+  flex: 1;
 }
 
 .cart-items-section h1 {
@@ -180,10 +183,9 @@
   padding: 30px;
   border-radius: 8px;
   max-width: 400px;
-  margin-left: auto;
-  position: sticky;
-  top: 100px;
   height: fit-content;
+  position: sticky;
+  top: 150px;
 }
 
 .cart-summary h2 {
@@ -293,6 +295,11 @@
 @media (max-width: 768px) {
   .cart-page {
     padding: 15px;
+  }
+
+  .cart-container {
+    flex-direction: column;
+    gap: 20px;
   }
 
   .cart-items-section {

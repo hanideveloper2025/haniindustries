@@ -27,6 +27,7 @@ export default function AddProduct() {
   const [imagePreview, setImagePreview] = useState(null)
   const [ratingError, setRatingError] = useState("")
   const [addedProducts, setAddedProducts] = useState([])
+  const [editingIndex, setEditingIndex] = useState(null)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -58,16 +59,37 @@ export default function AddProduct() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    setSuccessMessage("Product added successfully!")
+    if (editingIndex !== null) {
+      // Update existing product
+      setAddedProducts((prev) =>
+        prev.map((product, index) =>
+          index === editingIndex
+            ? {
+                productId: formData.productId,
+                productName: formData.productName,
+                image: imagePreview,
+                price: formData.price,
+                stock: formData.stock,
+                size: formData.size,
+              }
+            : product
+        )
+      )
+      setSuccessMessage("Product updated successfully!")
+      setEditingIndex(null)
+    } else {
+      // Add new product
+      setAddedProducts((prev) => [...prev, {
+        productId: formData.productId,
+        productName: formData.productName,
+        image: imagePreview,
+        price: formData.price,
+        stock: formData.stock,
+        size: formData.size,
+      }])
+      setSuccessMessage("Product added successfully!")
+    }
     setTimeout(() => setSuccessMessage(""), 3000)
-    setAddedProducts((prev) => [...prev, {
-      productId: formData.productId,
-      productName: formData.productName,
-      image: imagePreview,
-      price: formData.price,
-      stock: formData.stock,
-      size: formData.size,
-    }])
     setFormData({
       productId: "",
       productName: "",
@@ -85,6 +107,32 @@ export default function AddProduct() {
       size: "",
     })
     setImagePreview(null)
+  }
+
+  const handleEdit = (index) => {
+    const product = addedProducts[index]
+    setFormData({
+      productId: product.productId,
+      productName: product.productName,
+      category: "",
+      ratings: "",
+      price: product.price,
+      originalPrice: "",
+      discount: "",
+      stock: product.stock,
+      description: "",
+      image: null,
+      reviewNo: "",
+      tax: "",
+      sizeType: "",
+      size: product.size,
+    })
+    setImagePreview(product.image)
+    setEditingIndex(index)
+  }
+
+  const handleDelete = (index) => {
+    setAddedProducts((prev) => prev.filter((_, i) => i !== index))
   }
 
   return (
@@ -308,7 +356,7 @@ export default function AddProduct() {
 
         <div className="form-actions">
           <button type="submit" className="btn-primary">
-            Add Product
+            {editingIndex !== null ? "Update Product" : "Add Product"}
           </button>
           <button type="reset" className="btn-secondary">
             Clear Form
@@ -328,6 +376,7 @@ export default function AddProduct() {
                 <th>Price</th>
                 <th>Stock</th>
                 <th>Size</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -341,6 +390,22 @@ export default function AddProduct() {
                   <td>₹{product.price}</td>
                   <td>{product.stock}</td>
                   <td>{product.size}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="edit-btn"
+                      onClick={() => handleEdit(index)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="delete-btn"
+                      onClick={() => handleDelete(index)}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

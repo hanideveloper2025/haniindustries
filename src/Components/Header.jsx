@@ -25,7 +25,7 @@ function Header() {
           </div>
 
           <div className="header-actions">
-            <Link to="/cart" className="cart-btn"><img src="/cart.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /> <span style={{ backgroundColor: 'red', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '0.8em' , margin: '5px' }}>{getCartCount()}</span></Link>
+            <Link to="/cart" className="cart-btn"><img src="/cart.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /> <span style={{ backgroundColor: 'red', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '0.6em' , margin: '5px' }}>{getCartCount()}</span></Link>
           </div>
 
           <button

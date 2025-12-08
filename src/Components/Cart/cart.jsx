@@ -63,9 +63,9 @@ function CartPage() {
                 ))}
               </div>
 
-              <div className="continue-shopping">
+              {/* <div className="continue-shopping">
                 <Link to="/collections">← Continue Shopping</Link>
-              </div>
+              </div> */}
             </main>
 
             <aside className="cart-summary">

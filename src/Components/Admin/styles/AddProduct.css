@@ -1,5 +1,5 @@
 .add-product-container {
-  margin-top: 50px;
+  margin-top: -90px;
   animation: slideIn 0.3s ease;
 }
 
@@ -204,6 +204,28 @@
 
 .btn-secondary:hover {
   background-color: #dee2e6;
+}
+
+.delete-btn {
+  padding: 9px 8px 9px 8px;
+  color: #f8f9fa;
+  font-size: 14px;
+  font-weight: bolder;
+  border-color: #001f3f;
+  margin: 20px;
+  background-color: rgb(251, 93, 8);
+  border-radius: 15px;
+}
+
+.edit-btn {
+  padding: 9px 8px 9px 8px;
+  color: #f8f9fa;
+  font-size: 14px;
+  font-weight: bolder;
+  border-color: #001f3f;
+  /* margin: 20px; */
+  background-color: rgb(25, 0, 255);
+  border-radius: 15px;
 }
 
 @media (max-width: 768px) {
