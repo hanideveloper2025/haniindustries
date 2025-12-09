@@ -33,6 +33,16 @@
   font-weight: 500;
 }
 
+.error-alert {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #f5c6cb;
+  font-weight: 500;
+}
+
 .product-form {
   background: white;
   padding: 2rem;
@@ -204,6 +214,26 @@
 
 .btn-secondary:hover {
   background-color: #dee2e6;
+}
+
+.btn-cancel {
+  background-color: #dc3545;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background-color: #c82333;
+}
+
+.btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .delete-btn {
@@ -399,7 +429,7 @@
 }
 
 .step:not(:last-child)::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 100%;
@@ -450,4 +480,196 @@
   color: #001f3f;
   font-size: 1rem;
   font-weight: 600;
+}
+
+/* Image Uploading Indicator */
+.uploading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #e3f2fd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: #1976d2;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #1976d2;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.file-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Sizes Summary in Step 4 */
+.sizes-summary {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.sizes-summary h5 {
+  margin: 0 0 1rem 0;
+  color: #001f3f;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.size-summary-item {
+  background-color: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.size-summary-header {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e9ecef;
+  color: #001f3f;
+}
+
+.size-summary-details {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.summary-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.size-summary-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.size-summary-info span {
+  white-space: nowrap;
+}
+
+/* Search Filter Styles */
+.search-filter {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.search-input::placeholder {
+  color: #adb5bd;
+}
+
+.search-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.search-btn:hover {
+  background-color: #1565c0;
+}
+
+.search-btn:active {
+  transform: scale(0.98);
+}
+
+.clear-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.clear-btn:hover {
+  background-color: #5a6268;
+}
+
+.clear-btn:active {
+  transform: scale(0.98);
+}
+
+.no-results {
+  padding: 2rem;
+  text-align: center;
+  color: #6c757d;
+  font-size: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px dashed #dee2e6;
+}
+
+@media (max-width: 600px) {
+  .search-filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input-wrapper {
+    min-width: 100%;
+  }
+
+  .search-btn,
+  .clear-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }

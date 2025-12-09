@@ -1,46 +1,62 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import "./AdminLogin.css"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./AdminLogin.css";
+
+const TEST = import.meta.env.VITE_TEST;
 
 const AdminLogin = () => {
-  const navigate = useNavigate()
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
-      if (username === "Admin" && password === "Admin@123") {
-        // Store authentication in localStorage
-        localStorage.setItem("adminAuthenticated", "true")
-        localStorage.setItem("adminUsername", username)
+    try {
+      const response = await fetch(`${TEST}/api/admin/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Important for cookies
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
         // Navigate to admin dashboard
-        navigate("/admin")
+        navigate("/admin");
       } else {
-        setError("Invalid username or password. Please try again.")
-        setPassword("")
+        setError(
+          data.message || "Invalid username or password. Please try again."
+        );
+        setPassword("");
       }
-      setLoading(false)
-    }, 500)
-  }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Unable to connect to server. Please try again later.");
+      setPassword("");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUsernameChange = (e) => {
-    setUsername(e.target.value)
-    setError("")
-  }
+    setUsername(e.target.value);
+    setError("");
+  };
 
   const handlePasswordChange = (e) => {
-    setPassword(e.target.value)
-    setError("")
-  }
+    setPassword(e.target.value);
+    setError("");
+  };
 
   return (
     <div className="login-container">
@@ -106,7 +122,7 @@ const AdminLogin = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AdminLogin
+export default AdminLogin;

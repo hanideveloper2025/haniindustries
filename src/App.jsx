@@ -28,9 +28,7 @@ function App() {
           {/* Admin Routes */}
           <Route path="/admin-login" element={<AdminLogin />} />
 
-          <Route
-            path="/admin"
-            element={
+          <Route path="/admin" element={
               <PrivateRoute>
                 <AdminDashboard onLogout={handleLogout} />
               </PrivateRoute>

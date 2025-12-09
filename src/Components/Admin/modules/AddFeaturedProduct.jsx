@@ -1,7 +1,9 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import "../styles/AddFeaturedProduct.css"
+import { useState, useEffect } from "react";
+import "../styles/AddFeaturedProduct.css";
+
+const TEST = import.meta.env.VITE_TEST;
 
 export default function AddFeaturedProduct() {
   const [formData, setFormData] = useState({
@@ -12,38 +14,142 @@ export default function AddFeaturedProduct() {
     originalPrice: "",
     productImage: "",
     discount: "",
-  })
-  const [successMessage, setSuccessMessage] = useState("")
-  const [imagePreview, setImagePreview] = useState("")
-  const [ratingError, setRatingError] = useState("")
-  const [featuredProducts, setFeaturedProducts] = useState([])
-  const [editingId, setEditingId] = useState(null)
+  });
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageUrl, setImageUrl] = useState(""); // Cloudinary URL
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [ratingError, setRatingError] = useState("");
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target
+  // Fetch featured products on component mount
+  useEffect(() => {
+    fetchFeaturedProducts();
+  }, []);
+
+  const fetchFeaturedProducts = async () => {
+    try {
+      const response = await fetch(
+        `${TEST}/api/admin/featured-products`,
+        {
+          credentials: "include",
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        // Transform data to match UI format
+        const transformedProducts = data.data.map((product) => ({
+          id: product.id,
+          productName: product.product_name,
+          ratings: product.rating?.toString() || "",
+          price: product.price?.toString() || "",
+          originalPrice: product.original_price?.toString() || "",
+          reviewNo: product.review_count?.toString() || "",
+          discount: product.discount_percent?.toString() || "",
+          image: product.image_url,
+          isActive: product.is_active,
+          displayOrder: product.display_order,
+        }));
+        setFeaturedProducts(transformedProducts);
+      }
+    } catch (error) {
+      console.error("Error fetching featured products:", error);
+    }
+  };
+
+  const handleChange = async (e) => {
+    const { name, value, files } = e.target;
 
     if (name === "productImage" && files && files[0]) {
-      const file = files[0]
-      const reader = new FileReader()
-      reader.onload = (e) => setImagePreview(e.target.result)
-      reader.readAsDataURL(file)
-      setFormData((prev) => ({ ...prev, [name]: file }))
-    } else if (name === "ratings") {
-      const ratingValue = parseFloat(value)
-      if (ratingValue > 5) {
-        setRatingError("Rating cannot be more than 5")
-      } else {
-        setRatingError("")
-      }
-      setFormData((prev) => ({ ...prev, [name]: value }))
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }))
-    }
-  }
+      const file = files[0];
 
-  const handleDelete = (id) => {
-    setFeaturedProducts((prev) => prev.filter((product) => product.id !== id))
-  }
+      // Show preview immediately
+      const reader = new FileReader();
+      reader.onload = (e) => setImagePreview(e.target.result);
+      reader.readAsDataURL(file);
+
+      // Upload to Cloudinary immediately
+      setUploadingImage(true);
+      try {
+        const formDataUpload = new FormData();
+        formDataUpload.append("image", file);
+
+        const response = await fetch(
+          `${TEST}/api/admin/featured-products/upload-image`,
+          {
+            method: "POST",
+            credentials: "include",
+            body: formDataUpload,
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          setImageUrl(data.data.url);
+        } else {
+          setErrorMessage(`Failed to upload image: ${data.message}`);
+          setImagePreview("");
+        }
+      } catch (error) {
+        console.error("Image upload error:", error);
+        setErrorMessage("Failed to upload image. Please try again.");
+        setImagePreview("");
+      } finally {
+        setUploadingImage(false);
+      }
+    } else if (name === "ratings") {
+      const ratingValue = parseFloat(value);
+      if (ratingValue > 5) {
+        setRatingError("Rating cannot be more than 5");
+      } else {
+        setRatingError("");
+      }
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (
+      !window.confirm("Are you sure you want to delete this featured product?")
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${TEST}/api/admin/featured-products/${id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccessMessage("Featured product deleted successfully!");
+        fetchFeaturedProducts();
+      } else {
+        setErrorMessage(data.message || "Failed to delete featured product");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      setErrorMessage("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+      setTimeout(() => {
+        setSuccessMessage("");
+        setErrorMessage("");
+      }, 3000);
+    }
+  };
 
   const handleEdit = (product) => {
     setFormData({
@@ -54,10 +160,11 @@ export default function AddFeaturedProduct() {
       originalPrice: product.originalPrice,
       productImage: "",
       discount: product.discount || "",
-    })
-    setImagePreview(product.image)
-    setEditingId(product.id)
-  }
+    });
+    setImagePreview(product.image);
+    setImageUrl(product.image); // Set existing image URL
+    setEditingId(product.id);
+  };
 
   const handleReset = () => {
     setFormData({
@@ -68,68 +175,121 @@ export default function AddFeaturedProduct() {
       originalPrice: "",
       productImage: "",
       discount: "",
-    })
-    setImagePreview("")
-    setRatingError("")
-    setEditingId(null)
-  }
+    });
+    setImagePreview("");
+    setImageUrl("");
+    setRatingError("");
+    setEditingId(null);
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (editingId) {
-      // Update existing product
-      setFeaturedProducts((prev) =>
-        prev.map((product) =>
-          product.id === editingId
-            ? {
-                ...product,
-                productName: formData.productName,
-                ratings: formData.ratings,
-                price: formData.price,
-                originalPrice: formData.originalPrice,
-                reviewNo: formData.reviewNo,
-                discount: formData.discount,
-                image: imagePreview || product.image,
-              }
-            : product
-        )
-      )
-      setSuccessMessage("Featured product updated successfully!")
-      setEditingId(null)
-    } else {
-      // Add new product
-      const newProduct = {
-        id: Date.now(),
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate image
+    if (!imageUrl && !editingId) {
+      setErrorMessage("Please upload a product image");
+      return;
+    }
+
+    // Check if image is still uploading
+    if (uploadingImage) {
+      setErrorMessage("Please wait for image to finish uploading");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      const submitData = {
         productName: formData.productName,
-        ratings: formData.ratings,
+        imageUrl: imageUrl,
         price: formData.price,
         originalPrice: formData.originalPrice,
-        reviewNo: formData.reviewNo,
-        discount: formData.discount,
-        image: imagePreview,
+        rating: formData.ratings,
+        reviewCount: formData.reviewNo,
+        discountPercent: formData.discount || 0,
+      };
+
+      const url = editingId
+        ? `${TEST}/api/admin/featured-products/${editingId}`
+        : `${TEST}/api/admin/featured-products`;
+
+      const response = await fetch(url, {
+        method: editingId ? "PUT" : "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submitData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccessMessage(
+          editingId
+            ? "Featured product updated successfully!"
+            : "Featured product added successfully!"
+        );
+        handleReset();
+        fetchFeaturedProducts();
+      } else {
+        setErrorMessage(data.message || "Failed to save featured product");
       }
-      setFeaturedProducts((prev) => [...prev, newProduct])
-      setSuccessMessage("Featured product added successfully!")
+    } catch (error) {
+      console.error("Submit error:", error);
+      setErrorMessage("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+      setTimeout(() => {
+        setSuccessMessage("");
+        setErrorMessage("");
+      }, 3000);
     }
-    setTimeout(() => setSuccessMessage(""), 3000)
-    setFormData({
-      productName: "",
-      ratings: "",
-      price: "",
-      reviewNo: "",
-      originalPrice: "",
-      productImage: "",
-      discount: "",
-    })
-    setImagePreview("")
-    setRatingError("")
-  }
+  };
+
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      const response = await fetch(
+        `${TEST}/api/admin/featured-products/${id}/toggle-status`,
+        {
+          method: "PATCH",
+          credentials: "include",
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccessMessage(
+          `Featured product ${
+            !currentStatus ? "activated" : "deactivated"
+          } successfully!`
+        );
+        fetchFeaturedProducts();
+      } else {
+        setErrorMessage(data.message || "Failed to toggle status");
+      }
+    } catch (error) {
+      console.error("Toggle status error:", error);
+      setErrorMessage("Network error. Please try again.");
+    } finally {
+      setTimeout(() => {
+        setSuccessMessage("");
+        setErrorMessage("");
+      }, 3000);
+    }
+  };
 
   return (
     <div className="featured-container">
-      <h2 className="featured-title">Add Featured Product</h2>
+      <h2 className="featured-title">
+        {editingId ? "Edit Featured Product" : "Add Featured Product"}
+      </h2>
 
       {successMessage && <div className="success-alert">{successMessage}</div>}
+      {errorMessage && <div className="error-alert">{errorMessage}</div>}
 
       <form className="featured-form" onSubmit={handleSubmit}>
         <div className="form-section">
@@ -163,11 +323,13 @@ export default function AddFeaturedProduct() {
                 step="0.1"
                 required
               />
-              {ratingError && <span className="error-message">{ratingError}</span>}
+              {ratingError && (
+                <span className="error-message">{ratingError}</span>
+              )}
             </div>
 
             <div className="form-group">
-              <label htmlFor="price">Price *</label>
+              <label htmlFor="price">Price (₹) *</label>
               <input
                 type="number"
                 id="price"
@@ -196,7 +358,7 @@ export default function AddFeaturedProduct() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="originalPrice">MRP *</label>
+              <label htmlFor="originalPrice">MRP (₹) *</label>
               <input
                 type="number"
                 id="originalPrice"
@@ -211,7 +373,9 @@ export default function AddFeaturedProduct() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="productImage">Product Image *</label>
+              <label htmlFor="productImage">
+                Product Image {!editingId && "*"}
+              </label>
               <div className="input-preview-container">
                 <input
                   type="file"
@@ -219,11 +383,27 @@ export default function AddFeaturedProduct() {
                   name="productImage"
                   onChange={handleChange}
                   accept="image/*"
-                  required
+                  required={!editingId && !imageUrl}
+                  disabled={uploadingImage}
                 />
-                {imagePreview && (
+                {uploadingImage && (
+                  <div className="uploading-indicator">
+                    <span className="spinner"></span> Uploading...
+                  </div>
+                )}
+                {imagePreview && !uploadingImage && (
                   <div className="image-preview">
                     <img src={imagePreview} alt="Product Preview" />
+                    <button
+                      type="button"
+                      className="close-preview"
+                      onClick={() => {
+                        setImagePreview("");
+                        setImageUrl("");
+                      }}
+                    >
+                      ×
+                    </button>
                   </div>
                 )}
               </div>
@@ -246,11 +426,24 @@ export default function AddFeaturedProduct() {
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Update Featured Product" : "Add Featured Product"}
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={loading || uploadingImage}
+          >
+            {loading
+              ? "Saving..."
+              : editingId
+              ? "Update Featured Product"
+              : "Add Featured Product"}
           </button>
-          <button type="button" onClick={handleReset} className="btn-secondary">
-            Clear Form
+          <button
+            type="button"
+            onClick={handleReset}
+            className="btn-secondary"
+            disabled={loading}
+          >
+            {editingId ? "Cancel Edit" : "Clear Form"}
           </button>
         </div>
       </form>
@@ -264,8 +457,10 @@ export default function AddFeaturedProduct() {
                 <th>Image</th>
                 <th>Name</th>
                 <th>Price</th>
-                <th>Original Price</th>
-                <th>Review No.</th>
+                <th>MRP</th>
+                <th>Rating</th>
+                <th>Reviews</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -273,17 +468,40 @@ export default function AddFeaturedProduct() {
               {featuredProducts.map((product) => (
                 <tr key={product.id}>
                   <td>
-                    <img src={product.image} alt={product.productName} className="table-image" />
+                    <img
+                      src={product.image}
+                      alt={product.productName}
+                      className="table-image"
+                    />
                   </td>
                   <td>{product.productName}</td>
-                  <td>${product.price}</td>
-                  <td>${product.originalPrice}</td>
+                  <td>₹{product.price}</td>
+                  <td>₹{product.originalPrice}</td>
+                  <td>{product.ratings}</td>
                   <td>{product.reviewNo}</td>
                   <td>
-                    <button className="btn-edit" onClick={() => handleEdit(product)}>
+                    <button
+                      className={`status-btn ${
+                        product.isActive ? "active" : "inactive"
+                      }`}
+                      onClick={() =>
+                        handleToggleStatus(product.id, product.isActive)
+                      }
+                    >
+                      {product.isActive ? "Active" : "Inactive"}
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      className="btn-edit"
+                      onClick={() => handleEdit(product)}
+                    >
                       Edit
                     </button>
-                    <button className="btn-delete" onClick={() => handleDelete(product.id)}>
+                    <button
+                      className="btn-delete"
+                      onClick={() => handleDelete(product.id)}
+                    >
                       Delete
                     </button>
                   </td>
@@ -294,5 +512,5 @@ export default function AddFeaturedProduct() {
         </div>
       )}
     </div>
-  )
+  );
 }

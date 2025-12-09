@@ -14,6 +14,7 @@ export default function AdminDashboard({ onLogout }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const navigate = useNavigate()
+  const TEST = import.meta.env.VITE_TEST;
 
   const renderContent = () => {
     switch (activeModule) {
@@ -33,20 +34,26 @@ export default function AdminDashboard({ onLogout }) {
   }
 
   const handleLogout = () => {
-    setShowLogoutModal(true)
-  }
+    setShowLogoutModal(true);
+  };
 
-  const confirmLogout = () => {
-    if (onLogout) {
-      onLogout()
-      navigate("/")
+  const confirmLogout = async () => {
+    try {
+      await fetch(`${TEST}/api/admin/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      navigate("/admin-login");
     }
-    setShowLogoutModal(false)
-  }
+    setShowLogoutModal(false);
+  };
 
   const cancelLogout = () => {
-    setShowLogoutModal(false)
-  }
+    setShowLogoutModal(false);
+  };
 
   return (
     <div className={`admin-container ${isMenuOpen ? 'menu-open' : ''}`}>
@@ -98,7 +105,7 @@ export default function AdminDashboard({ onLogout }) {
                     setIsMenuOpen(false)
                   }}
                 >
-                  <span className="menu-icon">📊</span>
+                  <span className="menu-icon"><img src="/dashboard.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /></span>
                   <span className="menu-text">Dashboard</span>
                 </button>
               </li>
@@ -111,7 +118,7 @@ export default function AdminDashboard({ onLogout }) {
                     setIsMenuOpen(false)
                   }}
                 >
-                  <span className="menu-icon">➕</span>
+                  <span className="menu-icon"><img src="/add.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /></span>
                   <span className="menu-text">Add Product</span>
                 </button>
               </li>
@@ -124,7 +131,7 @@ export default function AdminDashboard({ onLogout }) {
                     setIsMenuOpen(false)
                   }}
                 >
-                  <span className="menu-icon">⭐</span>
+                  <span className="menu-icon"><img src="/Feature.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /></span>
                   <span className="menu-text">Featured Product</span>
                 </button>
               </li>
@@ -137,7 +144,7 @@ export default function AdminDashboard({ onLogout }) {
                     setIsMenuOpen(false)
                   }}
                 >
-                  <span className="menu-icon">💳</span>
+                  <span className="menu-icon"><img src="/card.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /></span>
                   <span className="menu-text">Cart & Payment</span>
                 </button>
               </li> */}
@@ -150,7 +157,7 @@ export default function AdminDashboard({ onLogout }) {
                     setIsMenuOpen(false)
                   }}
                 >
-                  <span className="menu-icon">📦</span>
+                  <span className="menu-icon"><img src="/placed.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /></span>
                   <span className="menu-text">Placed Orders</span>
                 </button>
               </li>

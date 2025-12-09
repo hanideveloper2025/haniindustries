@@ -137,13 +137,13 @@
   color: var(--text-dark);
   text-decoration: none;
   transition: 0.3s;
-  font-family: 'poppins';
+  font-family: 'Manrope', 'Sora', sans-serif;
 }
 
 .navbar button {
   font-size: 15px;
   font-weight: 700;
-  font-family:'poppins';
+  font-family: 'Manrope', 'Sora', sans-serif;
 }
 
 .navbar a:hover {
