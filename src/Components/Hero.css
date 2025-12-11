@@ -36,6 +36,7 @@
 
 .hero-text {
   display: flex;
+  font-family: Georgia, 'Times New Roman', Times, serif;
   flex-direction: column;
   gap: 16px;
 }
@@ -148,12 +149,14 @@
 .carousel-slide h3 {
   font-size: 18px;
   font-weight: 700;
+  font-family: Georgia, 'Times New Roman', Times, serif;
   color: var(--primary-maroon);
   margin-bottom: 8px;
 }
 
 .carousel-slide p {
   font-size: 13px;
+  font-family: Georgia, 'Times New Roman', Times, serif;
   color: var(--text-light);
   line-height: 1.4;
 }

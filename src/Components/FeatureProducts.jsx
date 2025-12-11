@@ -114,7 +114,7 @@ function FeaturedProducts() {
   return (
     <section className="featured-products">
       <div className="featured-container">
-        <h2 className="featured-title">Featured Collection</h2>
+        <h2 className="featured-title">OUR COLLECTIONS</h2>
 
         <div className="featured-filters">
           <button
@@ -138,12 +138,12 @@ function FeaturedProducts() {
             Cleaners
           </button>
 
-          <button
+          {/* <button
             className={`filter-btn ${activeFilter === "other" ? "active" : ""}`}
             onClick={() => setActiveFilter("other")}
           >
             Others
-          </button>
+          </button> */}
         </div>
 
         <div className="products-grid">

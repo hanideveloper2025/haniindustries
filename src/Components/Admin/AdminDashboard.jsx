@@ -123,7 +123,7 @@ export default function AdminDashboard({ onLogout }) {
                 </button>
               </li>
 
-              <li>
+              {/* <li>
                 <button
                   className={`menu-item ${activeModule === "addFeatured" ? "active" : ""}`}
                   onClick={() => {
@@ -134,7 +134,7 @@ export default function AdminDashboard({ onLogout }) {
                   <span className="menu-icon"><img src="/Feature.svg" alt="Cart" style={{ width: '1.5em', height: '1.5em' }} /></span>
                   <span className="menu-text">Featured Product</span>
                 </button>
-              </li>
+              </li> */}
 
               {/* <li>
                 <button

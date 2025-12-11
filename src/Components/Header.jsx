@@ -71,12 +71,12 @@ function Header() {
                 Appalam
               </Link>
 
-              <Link
+              {/* <Link
                 to="/collections?category=others"
                 onClick={() => setIsDropdownOpen(false)}
               >
                 Others
-              </Link>
+              </Link> */}
             </div>
           )}
         </div>
