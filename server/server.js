@@ -33,13 +33,18 @@ app.get("/", (req, res) => {
   res.send("Hello From Hani Industries Server");
 });
 
-//Admin Routes
+// Public Routes (Homepage, Products)
+app.use("/api/home", require("./routes/public/homeRoutes"));
+
+// Order Routes (Razorpay Integration)
+app.use("/api/orders", require("./routes/public/orderRoutes"));
+
+// Contact Routes
+app.use("/api/contact", require("./routes/public/contactRoutes"));
+
+// Admin Routes
 app.use("/api/admin", require("./routes/admin/loginRoutes"));
 app.use("/api/admin/products", require("./routes/admin/productRoutes"));
-app.use(
-  "/api/admin/featured-products",
-  require("./routes/admin/featuredProductRoutes")
-);
 
 app.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

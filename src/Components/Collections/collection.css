@@ -29,6 +29,21 @@
   margin-bottom: 30px;
 }
 
+/* Search Info Banner */
+.search-info-banner {
+  background: linear-gradient(135deg, #142a5a 0%, #1e3a7a 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.search-info-banner p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .collections-content {
   display: grid;
   grid-template-columns: 250px 1fr;

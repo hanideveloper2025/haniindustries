@@ -1,18 +1,36 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
-import { useCart } from "./CartContext"
-import { QRCodeCanvas } from "qrcode.react"
-import "./checkout.css"
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useCart } from "./CartContext";
+import "./checkout.css";
+
+const TEST = import.meta.env.VITE_TEST;
+const MAIN = import.meta.env.VITE_MAIN;
+
+// Load Razorpay script
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 function CheckoutPage() {
-  const { cartItems } = useCart()
-  const [selectedPayment, setSelectedPayment] = useState("cod")
-  const [selectedOnlinePayment, setSelectedOnlinePayment] = useState("")
-  const [lastSelectedOnlinePayment, setLastSelectedOnlinePayment] = useState("")
-  const [showQRCode, setShowQRCode] = useState(false)
-  const [orderId, setOrderId] = useState("")
+  const { cartItems, setStockValidationErrors, clearCart } = useCart();
+  const navigate = useNavigate();
+  const [selectedPayment, setSelectedPayment] = useState("cod");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showOrderSuccess, setShowOrderSuccess] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
+  const modalRef = useRef(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -22,89 +40,449 @@ function CheckoutPage() {
     city: "",
     postalCode: "",
     state: "",
-  })
-
-  const [cardData, setCardData] = useState({
-    cardNumber: "",
-    cardholderName: "",
-    expiryDate: "",
-    cvv: "",
-  })
+  });
 
   const handleFormChange = (e) => {
-    const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
-  }
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
 
-  const handleCardChange = (e) => {
-    const { name, value } = e.target
-    setCardData({ ...cardData, [name]: value })
-  }
+  // Calculate amounts
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const tax = subtotal * 0.18;
+  const shipping = subtotal > 500 ? 0 : 100;
+  const total = subtotal + tax + shipping;
 
-  // Generate order ID on component mount
-  useEffect(() => {
-    const lastOrderNumber = localStorage.getItem('lastOrderNumber') || 0
-    const nextOrderNumber = parseInt(lastOrderNumber) + 1
-    const newOrderId = `ORD${nextOrderNumber.toString().padStart(3, '0')}`
-    setOrderId(newOrderId)
-  }, [])
+  // Convert to paise for Razorpay
+  const amountsInPaise = {
+    subtotal: Math.round(subtotal * 100),
+    tax: Math.round(tax * 100),
+    shipping: Math.round(shipping * 100),
+    total: Math.round(total * 100),
+  };
 
-  // Reset online payment selection and QR code when payment method changes
-  useEffect(() => {
-    if (selectedPayment !== "online") {
-      if (selectedOnlinePayment) {
-        setLastSelectedOnlinePayment(selectedOnlinePayment)
+  // Validate stock before order
+  const validateStock = async () => {
+    const errors = [];
+
+    for (const item of cartItems) {
+      try {
+        const response = await fetch(
+          `${MAIN}/api/home/product/${item.productId}`
+        );
+        if (!response.ok) continue;
+
+        const data = await response.json();
+        if (!data.success) continue;
+
+        const product = data.data;
+
+        let availableStock = 0;
+        if (product.variants && product.variants.length > 0) {
+          const variant = product.variants.find((v) => v.size === item.size);
+          if (variant) {
+            availableStock = variant.stock || 0;
+          } else {
+            availableStock = product.variants[0].stock || 0;
+          }
+        } else {
+          availableStock = product.stock || 0;
+        }
+
+        if (item.quantity > availableStock) {
+          errors.push({
+            itemId: item.id,
+            itemName: item.name,
+            itemSize: item.size,
+            requestedQty: item.quantity,
+            availableStock: availableStock,
+            isOutOfStock: availableStock === 0,
+          });
+        }
+      } catch (err) {
+        console.error(`Error checking stock for ${item.name}:`, err);
       }
-      setSelectedOnlinePayment("")
-      setShowQRCode(false)
-    } else if (selectedPayment === "online" && !selectedOnlinePayment && lastSelectedOnlinePayment) {
-      // Restore the last selected online payment when switching back to online
-      setSelectedOnlinePayment(lastSelectedOnlinePayment)
     }
-  }, [selectedPayment])
 
-  const handlePlaceOrder = () => {
-    const isFormValid = Object.values(formData).every((field) => field.trim() !== "")
+    return errors;
+  };
+
+  // Handle order completion
+  const handleOrderSuccess = (orderData) => {
+    setOrderDetails({
+      orderId: orderData.orderId,
+      paymentMethod:
+        selectedPayment === "cod" ? "Cash on Delivery" : "Online Payment",
+      total: total.toFixed(2),
+      itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      shippingAddress: `${formData.address}, ${formData.city}, ${formData.state} - ${formData.postalCode}`,
+      customerName: `${formData.firstName} ${formData.lastName}`,
+      email: formData.email,
+      phone: formData.phone,
+      deliveryDate: orderData.estimatedDelivery,
+    });
+
+    // Show success modal
+    setShowOrderSuccess(true);
+
+    // Clear cart and session data
+    clearCart();
+    sessionStorage.removeItem("cartItems");
+    sessionStorage.removeItem("cartTimestamp");
+  };
+
+  // Open Razorpay checkout
+  const openRazorpayCheckout = async (orderData) => {
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      alert("Failed to load payment gateway. Please try again.");
+      setIsProcessing(false);
+      return;
+    }
+
+    const options = {
+      key: orderData.razorpayKeyId,
+      amount: orderData.amount,
+      currency: orderData.currency,
+      name: "Hani Industries",
+      description: `Order ${orderData.orderId}`,
+      order_id: orderData.razorpayOrderId,
+      prefill: {
+        name: orderData.customerName,
+        email: orderData.customerEmail,
+        contact: orderData.customerPhone,
+      },
+      theme: {
+        color: "#1a365d",
+      },
+      handler: async function (response) {
+        // Payment successful - verify on backend
+        try {
+          const verifyResponse = await fetch(`${MAIN}/api/orders/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              orderDbId: orderData.orderDbId,
+              cartItems: cartItems,
+            }),
+          });
+
+          const verifyData = await verifyResponse.json();
+
+          if (verifyData.success) {
+            handleOrderSuccess({
+              orderId: verifyData.data.orderId,
+              estimatedDelivery: orderData.estimatedDelivery,
+            });
+          } else {
+            alert("Payment verification failed. Please contact support.");
+          }
+        } catch (error) {
+          console.error("Verification error:", error);
+          alert("Payment verification error. Please contact support.");
+        }
+        setIsProcessing(false);
+      },
+      modal: {
+        ondismiss: async function () {
+          // Payment cancelled
+          try {
+            await fetch(`${MAIN}/api/orders/failed`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: orderData.razorpayOrderId,
+                error_description: "Payment cancelled by user",
+                orderDbId: orderData.orderDbId,
+              }),
+            });
+          } catch (error) {
+            console.error("Failed to record cancellation:", error);
+          }
+          setIsProcessing(false);
+        },
+      },
+    };
+
+    const razorpay = new window.Razorpay(options);
+
+    razorpay.on("payment.failed", async function (response) {
+      try {
+        await fetch(`${MAIN}/api/orders/failed`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            razorpay_order_id: orderData.razorpayOrderId,
+            error_description: response.error.description,
+            orderDbId: orderData.orderDbId,
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to record failure:", error);
+      }
+      alert(`Payment failed: ${response.error.description}`);
+      setIsProcessing(false);
+    });
+
+    razorpay.open();
+  };
+
+  // Handle place order
+  const handlePlaceOrder = async () => {
+    // Validate form
+    const isFormValid = Object.values(formData).every(
+      (field) => field.trim() !== ""
+    );
     if (!isFormValid) {
-      alert("Please fill all shipping details")
-      return
+      alert("Please fill all shipping details");
+      return;
     }
 
-    if (selectedPayment === "card") {
-      const isCardValid =
-        cardData.cardNumber.length === 16 && cardData.expiryDate && cardData.cvv.length === 3 && cardData.cardholderName
-      if (!isCardValid) {
-        alert("Please fill all card details correctly")
-        return
+    if (cartItems.length === 0) {
+      alert("Your cart is empty");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Step 1: Validate stock
+      const stockErrors = await validateStock();
+      if (stockErrors.length > 0) {
+        setStockValidationErrors(stockErrors);
+        navigate("/cart");
+        setIsProcessing(false);
+        return;
       }
+
+      // Step 2: Create order on backend
+      const orderPayload = {
+        customerDetails: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+        },
+        shippingDetails: {
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          postalCode: formData.postalCode,
+        },
+        cartItems: cartItems.map((item) => ({
+          productId: item.productId,
+          name: item.name,
+          image: item.image,
+          size: item.size,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        paymentMethod: selectedPayment,
+        amounts: amountsInPaise,
+      };
+
+      const response = await fetch(`${MAIN}/api/orders/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        // Check if it's a stock validation error from backend
+        if (data.stockErrors && data.stockErrors.length > 0) {
+          setStockValidationErrors(data.stockErrors);
+          navigate("/cart");
+          setIsProcessing(false);
+          return;
+        }
+        alert(data.message || "Failed to create order");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Step 3: Handle based on payment method
+      if (selectedPayment === "cod") {
+        // COD - Order is complete
+        handleOrderSuccess(data.data);
+        setIsProcessing(false);
+      } else {
+        // Online payment - Open Razorpay
+        openRazorpayCheckout(data.data);
+      }
+    } catch (error) {
+      console.error("Order error:", error);
+      alert("Failed to process order. Please try again.");
+      setIsProcessing(false);
     }
+  };
 
-    if (selectedPayment === "online" && !selectedOnlinePayment) {
-      alert("Please select an online payment method")
-      return
+  // Handle continue shopping - redirect to home
+  const handleContinueShopping = () => {
+    document.body.style.overflow = "";
+    setShowOrderSuccess(false);
+    navigate("/");
+  };
+
+  // Lock body scroll when modal is open and auto-scroll modal
+  useEffect(() => {
+    if (showOrderSuccess) {
+      document.body.style.overflow = "hidden";
+
+      const scrollTimer = setTimeout(() => {
+        if (modalRef.current) {
+          const scrollHeight = modalRef.current.scrollHeight;
+          const clientHeight = modalRef.current.clientHeight;
+          const scrollDistance = scrollHeight - clientHeight;
+
+          if (scrollDistance > 0) {
+            const startTime = Date.now();
+            const duration = 3000;
+
+            const animateScroll = () => {
+              const elapsed = Date.now() - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+              const easeInOutQuad =
+                progress < 0.5
+                  ? 2 * progress * progress
+                  : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+              if (modalRef.current) {
+                modalRef.current.scrollTop = scrollDistance * easeInOutQuad;
+              }
+
+              if (progress < 1) {
+                requestAnimationFrame(animateScroll);
+              }
+            };
+
+            requestAnimationFrame(animateScroll);
+          }
+        }
+      }, 1000);
+
+      return () => {
+        clearTimeout(scrollTimer);
+        document.body.style.overflow = "";
+      };
     }
-
-    // Update localStorage with the current order number to ensure uniqueness
-    const currentOrderNumber = parseInt(orderId.replace('ORD', ''))
-    localStorage.setItem('lastOrderNumber', currentOrderNumber.toString())
-
-    if (selectedPayment === "online") {
-      setShowQRCode(true)
-      alert(`Order placed successfully! Please scan the QR code to complete payment of Rs. ${total.toFixed(2)}`)
-    } else {
-      alert(`Order placed successfully with ${selectedPayment.toUpperCase()}`)
-    }
-  }
-
-
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const tax = subtotal * 0.18
-  const shipping = subtotal > 500 ? 0 : 100
-  const total = subtotal + tax + shipping
+  }, [showOrderSuccess]);
 
   return (
     <div className="checkout-page">
+      {/* Order Success Modal */}
+      {showOrderSuccess && orderDetails && (
+        <div className="order-success-overlay">
+          <div className="order-success-modal" ref={modalRef}>
+            {/* Success Animation */}
+            <div className="success-animation">
+              <div className="success-checkmark">
+                <div className="check-icon">
+                  <span className="icon-line line-tip"></span>
+                  <span className="icon-line line-long"></span>
+                  <div className="icon-circle"></div>
+                  <div className="icon-fix"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Success Header */}
+            <div className="success-header">
+              <h1>Order Placed Successfully!</h1>
+              <p className="success-subtitle">
+                Thank you for shopping with Hani Industries
+              </p>
+            </div>
+
+            {/* Order ID Badge */}
+            <div className="order-id-badge">
+              <span className="order-label">Order ID</span>
+              <span className="order-number">{orderDetails.orderId}</span>
+            </div>
+
+            {/* Order Summary */}
+            <div className="order-success-details">
+              <div className="detail-section">
+                <div className="detail-icon">📦</div>
+                <div className="detail-content">
+                  <span className="detail-label">Delivery Expected By</span>
+                  <span className="detail-value">
+                    {orderDetails.deliveryDate}
+                  </span>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <div className="detail-icon">📍</div>
+                <div className="detail-content">
+                  <span className="detail-label">Shipping To</span>
+                  <span className="detail-value">
+                    {orderDetails.customerName}
+                  </span>
+                  <span className="detail-subvalue">
+                    {orderDetails.shippingAddress}
+                  </span>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <div className="detail-icon">💳</div>
+                <div className="detail-content">
+                  <span className="detail-label">Payment Method</span>
+                  <span className="detail-value payment-badge">
+                    {orderDetails.paymentMethod}
+                  </span>
+                </div>
+              </div>
+
+              <div className="detail-section total-section">
+                <div className="detail-icon">🛒</div>
+                <div className="detail-content">
+                  <span className="detail-label">
+                    {orderDetails.itemCount} Item(s)
+                  </span>
+                  <span className="detail-value total-amount">
+                    Rs. {orderDetails.total}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Confirmation Message */}
+            <div className="confirmation-message">
+              <p>
+                📧 A confirmation email has been sent to{" "}
+                <strong>{orderDetails.email}</strong>
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="success-actions">
+              <button
+                className="continue-shopping-btn"
+                onClick={handleContinueShopping}
+              >
+                <span>🏠</span> Continue Shopping
+              </button>
+            </div>
+
+            {/* Footer Note */}
+            <div className="success-footer">
+              <p>
+                Need help? <a href="/contact">Contact Support</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="breadcrumb">
         <span>Home</span>
         <span> / </span>
@@ -159,7 +537,7 @@ function CheckoutPage() {
                   />
                 </div>
                 <div className="form-field">
-                  <label htmlFor="phone">Phone Number </label>
+                  <label htmlFor="phone">Phone Number</label>
                   <input
                     type="tel"
                     id="phone"
@@ -192,7 +570,7 @@ function CheckoutPage() {
                     name="city"
                     value={formData.city}
                     onChange={handleFormChange}
-                    placeholder="New York"
+                    placeholder="Mumbai"
                   />
                 </div>
                 <div className="form-field">
@@ -203,7 +581,7 @@ function CheckoutPage() {
                     name="state"
                     value={formData.state}
                     onChange={handleFormChange}
-                    placeholder="NY"
+                    placeholder="Maharashtra"
                   />
                 </div>
                 <div className="form-field">
@@ -214,7 +592,7 @@ function CheckoutPage() {
                     name="postalCode"
                     value={formData.postalCode}
                     onChange={handleFormChange}
-                    placeholder="10001"
+                    placeholder="400001"
                   />
                 </div>
               </div>
@@ -237,13 +615,17 @@ function CheckoutPage() {
               />
               <label htmlFor="cod" className="payment-label">
                 <div className="payment-header">
-                  <span className="payment-title">Cash on Delivery (COD)</span>
+                  <span className="payment-title">
+                    💵 Cash on Delivery (COD)
+                  </span>
                 </div>
-                <p className="payment-desc">Pay when your order is delivered to your doorstep</p>
+                <p className="payment-desc">
+                  Pay when your order is delivered to your doorstep
+                </p>
               </label>
             </div>
 
-            {/* Online Payment */}
+            {/* Online Payment (Razorpay) */}
             <div className="payment-option">
               <input
                 type="radio"
@@ -255,167 +637,45 @@ function CheckoutPage() {
               />
               <label htmlFor="online" className="payment-label">
                 <div className="payment-header">
-                  <span className="payment-title">Online Payment</span>
+                  <span className="payment-title">💳 Pay Online</span>
+                  <span className="payment-badge-secure">🔒 Secure</span>
                 </div>
-                <div className="payment-methods-grid">
-                  {/* Google Pay */}
-                  <div
-                    className={`payment-method-icon ${selectedOnlinePayment === "Google Pay" ? "selected" : ""}`}
-                    onClick={() => setSelectedOnlinePayment("Google Pay")}
-                  >
-                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                      <rect width="40" height="40" rx="8" fill="#F3F3F3" />
-                      <text x="20" y="26" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#1F2937">
-                        GPay
-                      </text>
-                    </svg>
-                    <span>Google Pay</span>
-                  </div>
-
-                  {/* Paytm */}
-                  <div
-                    className={`payment-method-icon ${selectedOnlinePayment === "Paytm" ? "selected" : ""}`}
-                    onClick={() => setSelectedOnlinePayment("Paytm")}
-                  >
-                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                      <rect width="40" height="40" rx="8" fill="#002970" />
-                      <text x="20" y="26" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white">
-                        PAYTM
-                      </text>
-                    </svg>
-                    <span>Paytm</span>
-                  </div>
-
-                  {/* PhonePe */}
-                  <div
-                    className={`payment-method-icon ${selectedOnlinePayment === "PhonePe" ? "selected" : ""}`}
-                    onClick={() => setSelectedOnlinePayment("PhonePe")}
-                  >
-                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                      <rect width="40" height="40" rx="8" fill="#5F2D91" />
-                      <text x="20" y="26" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white">
-                        PhonePe
-                      </text>
-                    </svg>
-                    <span>PhonePe</span>
-                  </div>
-                </div>
-              </label>
-            </div>
-
-            {/* Card Payment */}
-            <div className="payment-option">
-              <input
-                type="radio"
-                id="card"
-                name="payment"
-                value="card"
-                checked={selectedPayment === "card"}
-                onChange={(e) => setSelectedPayment(e.target.value)}
-              />
-              <label htmlFor="card" className="payment-label">
-                <div className="payment-header">
-                  <span className="payment-title">Debit/Credit Card</span>
-                </div>
-                <p className="payment-desc">Visa, Mastercard, or any other card payment</p>
-              </label>
-            </div>
-
-            {/* Card Details Form - Show only when card is selected */}
-            {selectedPayment === "card" && (
-              <div className="card-form">
-                <div className="form-field">
-                  <label htmlFor="cardholderName">Cardholder Name</label>
-                  <input
-                    type="text"
-                    id="cardholderName"
-                    name="cardholderName"
-                    value={cardData.cardholderName}
-                    onChange={handleCardChange}
-                    placeholder="John Doe"
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label htmlFor="cardNumber">Card Number</label>
-                  <input
-                    type="text"
-                    id="cardNumber"
-                    name="cardNumber"
-                    value={cardData.cardNumber}
-                    onChange={handleCardChange}
-                    placeholder="1234 5678 9012 3456"
-                    maxLength="16"
-                  />
-                </div>
-
-                <div className="form-row">
-                  <div className="form-field">
-                    <label htmlFor="expiryDate">Expiry Date (MM/YY)</label>
-                    <input
-                      type="text"
-                      id="expiryDate"
-                      name="expiryDate"
-                      value={cardData.expiryDate}
-                      onChange={handleCardChange}
-                      placeholder="MM/YY"
-                      maxLength="5"
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="cvv">CVV</label>
-                    <input
-                      type="text"
-                      id="cvv"
-                      name="cvv"
-                      value={cardData.cvv}
-                      onChange={handleCardChange}
-                      placeholder="123"
-                      maxLength="3"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* QR Code Display - Show only when online payment is selected and Place Order is clicked */}
-            {showQRCode && selectedPayment === "online" && selectedOnlinePayment && (
-              <div className="qr-code-section">
-                <h3>Scan QR Code to Pay</h3>
-                <div className="qr-code-container">
-                  <QRCodeCanvas
-                    value={`upi://pay?pa=merchant@haniindustries&pn=HANI%20INDUSTRIES&am=${total.toFixed(2)}&cu=INR&tn=Payment%20for%20Order`}
-                    size={200}
-                    level="M"
-                  />
-                </div>
-                <p className="qr-instructions">
-                  Scan this QR code with your {selectedOnlinePayment} app to complete the payment of Rs. {total.toFixed(2)}
+                <p className="payment-desc">
+                  UPI, Credit/Debit Card, Net Banking, Wallets
                 </p>
-              </div>
-            )}
+                <div className="payment-logos">
+                  <span className="payment-logo">GPay</span>
+                  <span className="payment-logo">PhonePe</span>
+                  <span className="payment-logo">Paytm</span>
+                  <span className="payment-logo">VISA</span>
+                  <span className="payment-logo">Mastercard</span>
+                </div>
+              </label>
+            </div>
           </div>
         </main>
 
         {/* Order Summary Sidebar */}
         <aside className="checkout-summary">
           <h2>Order Summary</h2>
-          <div className="order-id-display">
-            <span>Order ID: {orderId}</span>
-          </div>
 
           <div className="summary-items">
             {cartItems.map((item) => (
               <div key={item.id} className="summary-item-card">
                 <div className="summary-item-image">
-                  <img src={item.image || "/placeholder.svg?height=50&width=50"} alt={item.name} />
+                  <img
+                    src={item.image || "/placeholder.svg?height=50&width=50"}
+                    alt={item.name}
+                  />
                 </div>
                 <div className="summary-item-info">
                   <h3>{item.name}</h3>
                   <span className="item-size">Size: {item.size}</span>
                   <span className="item-qty">Qty: {item.quantity}</span>
                 </div>
-                <span className="summary-item-price">Rs. {item.price * item.quantity}</span>
+                <span className="summary-item-price">
+                  Rs. {item.price * item.quantity}
+                </span>
               </div>
             ))}
           </div>
@@ -425,7 +685,7 @@ function CheckoutPage() {
           <div className="summary-breakdown">
             <div className="summary-row">
               <span>Subtotal</span>
-              <span>Rs. {subtotal}</span>
+              <span>Rs. {subtotal.toFixed(2)}</span>
             </div>
             <div className="summary-row">
               <span>Tax (18%)</span>
@@ -444,8 +704,21 @@ function CheckoutPage() {
             <span>Rs. {total.toFixed(2)}</span>
           </div>
 
-          <button className="place-order-btn" onClick={handlePlaceOrder}>
-            Place Order
+          <button
+            className={`place-order-btn ${isProcessing ? "validating" : ""}`}
+            onClick={handlePlaceOrder}
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <span className="spinner"></span>
+                Processing...
+              </>
+            ) : selectedPayment === "cod" ? (
+              "Place Order (COD)"
+            ) : (
+              "Pay Now"
+            )}
           </button>
 
           <Link to="/cart" className="back-to-cart">
@@ -454,8 +727,7 @@ function CheckoutPage() {
         </aside>
       </div>
     </div>
-  )
+  );
 }
 
-export default CheckoutPage
- 
+export default CheckoutPage;

@@ -1,5 +1,8 @@
-import { useState } from "react"
-import "./Contact.css"
+import { useState } from "react";
+import "./Contact.css";
+
+const TEST = import.meta.env.VITE_TEST;
+const MAIN = import.meta.env.VITE_MAIN;
 
 function Contact() {
   const [formData, setFormData] = useState({
@@ -7,27 +10,69 @@ function Contact() {
     email: "",
     organization: "",
     phone: "",
-  })
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState({ type: "", message: "" });
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    })
-  }
+    });
+    // Clear status when user starts typing
+    if (submitStatus.message) {
+      setSubmitStatus({ type: "", message: "" });
+    }
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    // Handle form submission here
-    console.log("Form submitted:", formData)
-    alert("Thank you for contacting us! We will get back to you soon.")
-    setFormData({
-      name: "",
-      email: "",
-      organization: "",
-      phone: "",
-    })
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus({ type: "", message: "" });
+
+    try {
+      const response = await fetch(`${MAIN}/api/contact`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSubmitStatus({
+          type: "success",
+          message:
+            data.message ||
+            "Thank you for contacting us! We will get back to you soon.",
+        });
+        // Reset form
+        setFormData({
+          name: "",
+          email: "",
+          organization: "",
+          phone: "",
+          message: "",
+        });
+      } else {
+        setSubmitStatus({
+          type: "error",
+          message: data.message || "Failed to send message. Please try again.",
+        });
+      }
+    } catch (error) {
+      console.error("Contact form error:", error);
+      setSubmitStatus({
+        type: "error",
+        message: "Something went wrong. Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <section className="contact">
@@ -41,12 +86,13 @@ function Contact() {
           <div className="contact-info">
             <div className="info-item">
               <h3>Address</h3>
-              <p>Hani Industries<br />
-                        Plot No:44, 
-                        Vaishnavi nagar
-                        Thimmavaram
-                        <br />
-              Chengalpattu 603101</p>
+              <p>
+                Hani Industries
+                <br />
+                Plot No:44, Vaishnavi nagar Thimmavaram
+                <br />
+                Chengalpattu 603101
+              </p>
             </div>
             <div className="info-item">
               <h3>Phone</h3>
@@ -110,14 +156,47 @@ function Contact() {
               />
             </div>
 
-            <button type="submit" className="contact-submit-btn">
-              Send Message
+            <div className="form-group">
+              <label htmlFor="message">Message *</label>
+              <textarea
+                id="message"
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                required
+                placeholder="Enter your message or inquiry..."
+                rows="5"
+              />
+            </div>
+
+            {submitStatus.message && (
+              <div className={`submit-status ${submitStatus.type}`}>
+                {submitStatus.type === "success" ? "✅" : "❌"}{" "}
+                {submitStatus.message}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className={`contact-submit-btn ${
+                isSubmitting ? "submitting" : ""
+              }`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="spinner"></span>
+                  Sending...
+                </>
+              ) : (
+                "Send Message"
+              )}
             </button>
           </form>
         </div>
       </div>
     </section>
-  )
+  );
 }
 
-export default Contact
+export default Contact;

@@ -4,8 +4,6 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import "./AdminDashboard.css"
 import AddProduct from "./modules/AddProduct"
-import AddFeaturedProduct from "./modules/AddFeaturedProduct"
-import CartPayment from "./modules/CartPayment"
 import Dashboard from "./modules/Dashboard"
 import PlacedOrders from "./modules/PlacedOrders"
 
@@ -15,6 +13,7 @@ export default function AdminDashboard({ onLogout }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const navigate = useNavigate()
   const TEST = import.meta.env.VITE_TEST;
+  const MAIN = import.meta.env.VITE_MAIN;
 
   const renderContent = () => {
     switch (activeModule) {
@@ -39,7 +38,7 @@ export default function AdminDashboard({ onLogout }) {
 
   const confirmLogout = async () => {
     try {
-      await fetch(`${TEST}/api/admin/logout`, {
+      await fetch(`${MAIN}/api/admin/logout`, {
         method: "POST",
         credentials: "include",
       });

@@ -1,115 +1,56 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import ProductCard from "./ProductCard"
-import "./FeatureProducts.css"
+import { useState, useEffect } from "react";
+import ProductCard from "./ProductCard";
+import "./FeatureProducts.css";
+
+const TEST = import.meta.env.VITE_TEST;
+const MAIN = import.meta.env.VITE_MAIN;
 
 function FeaturedProducts() {
-  const [activeFilter, setActiveFilter] = useState("all")
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const featuredProducts = [
-    {
-      id: "HANI0001",
-      name: "IDHAYA OIL - 500ML BOTTLE",
-      price: 130,
-      originalPrice: 220,
-      image: "/Products/oils/idhayam_oil_500_ml_-removebg-preview.png",
-      rating: 4.5,
-      reviews: 128,
-      discount: 13,
-      badge: "sale",
-      category: "oil",
-    },
-    {
-      id: "HANI0002",
-      name: "IDHAYA OIL - 1L BOTTLE",
-      price: 260,
-      originalPrice: 430,
-      image: "/Products/oils/idhayam_oil_1000ml_-removebg-preview.png",
-      rating: 4.3,
-      reviews: 95,
-      discount: 12,
-      badge: "sale",
-      category: "oil",
-    },
-    {
-      id: "HANI0003",
-      name: "DEVI OIL - 1L BOTTLE",
-      price: 150,
-      originalPrice: 300,
-      image: "/Products/oils/devi_olii-removebg-preview.png",
-      rating: 4.6,
-      reviews: 156,
-      discount: 8,
-      badge: "sale",
-      category: "oil",
-    },
-    {
-      id: "HANI0004",
-      name: "DEVI OIL - 500ML",
-      price: 76,
-      originalPrice: 152,
-      image: "/Products/oils/devi_olii-removebg-preview.png",
-      rating: 4.4,
-      reviews: 112,
-      discount: 15,
-      badge: "sale",
-      category: "oil",
-    },
-    {
-      id: "HANI0005",
-      name: "LUCKY-ALL FLOOR CLEANER - LEMON 500ML",
-      price: 80,
-      originalPrice: 110,
-      image: "/Products/others/Lucky_All-removebg-preview.png",
-      rating: 4.4,
-      reviews: 89,
-      discount: 20,
-      badge: "sale",
-      category: "cleaners",
-    },
-    {
-      id: "HANI0006",
-      name: "HAPPY HOMES BATHROOM CLEANER 500ML",
-      price: 70,
-      originalPrice: 90,
-      image: "/Products/others/happyhome-removebg-preview.png",
-      rating: 4.2,
-      reviews: 64,
-      discount: 22,
-      badge: "sale",
-      category: "cleaners",
-    },
-    {
-      id: "HANI0007",
-      name: "RICH ALA 500ML ",
-      price: 45,
-      originalPrice: 90,
-      image: "/Products/others/hero8.jpg",
-      rating: 4.3,
-      reviews: 47,
-      discount: 18,
-      badge: "sale",
-      category: "cleaners",
-    },
-    {
-      id: "HANI0008",
-      name: "APPALAM 10 PCS",
-      price: 25,
-      originalPrice: 40,
-      image: "/Products/others/hero3.png",
-      rating: 4.1,
-      reviews: 33,
-      discount: 10,
-      badge: "sale",
-      category: "other",
-    },
-  ]
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
+        const response = await fetch(
+          `${MAIN}/api/home/featured-products?limit=8`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          setProducts(data.data);
+        } else {
+          throw new Error(data.message || "Failed to load products");
+        }
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Filter products based on active filter
   const filteredProducts =
     activeFilter === "all"
-      ? featuredProducts
-      : featuredProducts.filter((p) => p.category === activeFilter)
+      ? products
+      : products.filter((p) => p.category === activeFilter);
 
   return (
     <section className="featured-products">
@@ -125,14 +66,16 @@ function FeaturedProducts() {
           </button>
 
           <button
-            className={`filter-btn ${activeFilter === "oil" ? "active" : ""}`}
-            onClick={() => setActiveFilter("oil")}
+            className={`filter-btn ${activeFilter === "oils" ? "active" : ""}`}
+            onClick={() => setActiveFilter("oils")}
           >
             Oils
           </button>
 
           <button
-            className={`filter-btn ${activeFilter === "cleaners" ? "active" : ""}`}
+            className={`filter-btn ${
+              activeFilter === "cleaners" ? "active" : ""
+            }`}
             onClick={() => setActiveFilter("cleaners")}
           >
             Cleaners
@@ -147,13 +90,28 @@ function FeaturedProducts() {
         </div>
 
         <div className="products-grid">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          {loading ? (
+            <div className="loading-state">
+              <p>Loading products...</p>
+            </div>
+          ) : error ? (
+            <div className="error-state">
+              <p>Error: {error}</p>
+              <button onClick={() => window.location.reload()}>Retry</button>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="empty-state">
+              <p>No products found</p>
+            </div>
+          ) : (
+            filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          )}
         </div>
       </div>
     </section>
-  )
+  );
 }
 
-export default FeaturedProducts
+export default FeaturedProducts;
