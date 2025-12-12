@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 
 const TEST = import.meta.env.VITE_TEST;
+const MAIN = import.meta.env.VITE_MAIN;
 
 function PrivateRoute({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -10,7 +11,7 @@ function PrivateRoute({ children }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${TEST}/api/admin/check-auth`, {
+        const response = await fetch(`${MAIN}/api/admin/check-auth`, {
           method: "GET",
           credentials: "include", // Important for cookies
         });
