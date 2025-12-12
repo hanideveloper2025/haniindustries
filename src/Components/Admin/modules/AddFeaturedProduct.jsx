@@ -310,7 +310,7 @@ export default function AddFeaturedProduct() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="ratings">Ratings *</label>
+              <label htmlFor="ratings">Ratings  *</label>
               <input
                 type="number"
                 id="ratings"
