@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import "./AdminLogin.css";
 
 const TEST = import.meta.env.VITE_TEST;
-
+const MAIN = import.meta.env.VITE_MAIN;
 const AdminLogin = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -19,7 +19,7 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${TEST}/api/admin/login`, {
+      const response = await fetch(`${MAIN}/api/admin/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

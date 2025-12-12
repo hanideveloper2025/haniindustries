@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import "../styles/AddProduct.css";
 
 const TEST = import.meta.env.VITE_TEST;
+const MAIN = import.meta.env.VITE_MAIN;
 
 export default function AddProduct() {
   const fileInputRef = useRef(null);
@@ -39,7 +40,7 @@ export default function AddProduct() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`${TEST}/api/admin/products`, {
+      const response = await fetch(`${MAIN}/api/admin/products`, {
         credentials: "include",
       });
       const data = await response.json();
@@ -234,7 +235,7 @@ export default function AddProduct() {
           formDataUpload.append("image", file);
 
           const response = await fetch(
-            `${TEST}/api/admin/products/upload-image`,
+            `${MAIN}/api/admin/products/upload-image`,
             {
               method: "POST",
               credentials: "include",
@@ -353,8 +354,8 @@ export default function AddProduct() {
       };
 
       const url = editingId
-        ? `${TEST}/api/admin/products/${editingId}`
-        : `${TEST}/api/admin/products`;
+        ? `${MAIN}/api/admin/products/${editingId}`
+        : `${MAIN}/api/admin/products`;
 
       const response = await fetch(url, {
         method: editingId ? "PUT" : "POST",
@@ -449,7 +450,7 @@ export default function AddProduct() {
     setLoading(true);
     try {
       const response = await fetch(
-        `${TEST}/api/admin/products/${productId}/variant/${variantId}`,
+        `${MAIN}/api/admin/products/${productId}/variant/${variantId}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -495,7 +496,7 @@ export default function AddProduct() {
     setLoading(true);
     try {
       const response = await fetch(
-        `${TEST}/api/admin/products/${product.id}`,
+        `${MAIN}/api/admin/products/${product.id}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -525,7 +526,7 @@ export default function AddProduct() {
   const generateProductId = async () => {
     try {
       const response = await fetch(
-        `${TEST}/api/admin/products/generate-id`,
+        `${MAIN}/api/admin/products/generate-id`,
         {
           credentials: "include",
         }
