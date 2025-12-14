@@ -19,7 +19,7 @@
 body {
   font-family: 'Manrope', 'Sora', sans-serif;
   color: var(--text-dark);
-  background-color: #f8f5f5;
+  background: linear-gradient(135deg, #001f3f 0%, #003366 100%);
 }
 
 html,
