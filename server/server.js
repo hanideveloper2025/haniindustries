@@ -76,6 +76,11 @@ app.use("/api/contact", require("./routes/public/contactRoutes"));
 // Admin Routes
 app.use("/api/admin", require("./routes/admin/loginRoutes"));
 app.use("/api/admin/products", require("./routes/admin/productRoutes"));
+app.use("/api/admin/dashboard", require("./routes/admin/dashboardRoutes"));
+app.use(
+  "/api/admin/placed-orders",
+  require("./routes/admin/placedOrdersRoutes")
+);
 
 app.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

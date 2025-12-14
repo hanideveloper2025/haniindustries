@@ -1,112 +1,231 @@
-import { useState, useMemo } from "react"
-import "../styles/Dashboard.css"
+import { useState, useEffect, useRef } from "react";
+import "../styles/Dashboard.css";
+
+const TEST = import.meta.env.VITE_TEST;
+const MAIN = import.meta.env.VITE_MAIN;
 
 export default function Dashboard() {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [statusFilter, setStatusFilter] = useState("")
-  const [paymentFilter, setPaymentFilter] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [dateFromFilter, setDateFromFilter] = useState("")
-  const [dateToFilter, setDateToFilter] = useState("")
-  const [timeFromFilter, setTimeFromFilter] = useState("")
-  const [timeToFilter, setTimeToFilter] = useState("")
-  const itemsPerPage = 20
+  const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
+  const [timeFromFilter, setTimeFromFilter] = useState("");
+  const [timeToFilter, setTimeToFilter] = useState("");
+  const itemsPerPage = 20;
+  const refreshIntervalRef = useRef(null);
+
+  // State for API data
+  const [stats, setStats] = useState([
+    { label: "Total Products", value: "0", icon: "�", color: "#001f3f" },
+    { label: "Total Orders", value: "0", icon: "🛍️", color: "#FF4136" },
+    { label: "Sold Amount", value: "₹0", icon: "💳", color: "#2ECC40" },
+  ]);
+  const [orders, setOrders] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch Dashboard Stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch(`${MAIN}/api/admin/dashboard/stats`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include", // Important for cookies
+        });
+
+        const result = await response.json();
+        /* console.log("Stats API Response:", result); */
+
+        if (result.success) {
+          setStats([
+            {
+              label: "Total Products",
+              value: result.data.totalProducts.toString(),
+              icon: "�",
+              color: "#001f3f",
+            },
+            {
+              label: "Total Orders",
+              value: result.data.totalOrders.toLocaleString("en-IN"),
+              icon: "🛍️",
+              color: "#FF4136",
+            },
+            {
+              label: "Sold Amount",
+              value: `₹${(result.data.totalSoldAmount / 100).toLocaleString(
+                "en-IN",
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+              )}`,
+              icon: "💳",
+              color: "#2ECC40",
+            },
+          ]);
+        } else {
+          console.error("Failed to fetch stats:", result.message);
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard stats:", err);
+      }
+    };
+
+    fetchStats();
+
+    // Set up auto-refresh every 30 seconds
+    const statsInterval = setInterval(fetchStats, 30000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(statsInterval);
+  }, []);
+
+  // Fetch Orders with Filters
+useEffect(() => {
+  const fetchOrders = async () => {
+    // Don't show loading spinner on auto-refresh
+    if (!refreshIntervalRef.current) {
+      setLoading(true);
+    }
+
+    try {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      });
+
+      if (statusFilter) params.append("status", statusFilter);
+      if (paymentFilter) params.append("payment", paymentFilter);
+      if (searchTerm) params.append("search", searchTerm);
+      if (dateFromFilter) params.append("dateFrom", dateFromFilter);
+      if (dateToFilter) params.append("dateTo", dateToFilter);
+      if (timeFromFilter) params.append("timeFrom", timeFromFilter);
+      if (timeToFilter) params.append("timeTo", timeToFilter);
+
+      const response = await fetch(
+        `${MAIN}/api/admin/dashboard/orders?${params.toString()}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        setOrders(result.data.orders);
+        setTotalPages(result.data.pagination.totalPages);
+        setTotalOrders(result.data.pagination.totalOrders);
+        setError(null);
+      } else {
+        setError(result.message);
+        setOrders([]);
+      }
+
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError("Failed to fetch orders. Please try again.");
+      setOrders([]);
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-refresh controls
+  const startAutoRefresh = () => {
+    if (!refreshIntervalRef.current) {
+      refreshIntervalRef.current = setInterval(() => {
+        fetchOrders();
+      }, 30000);
+    }
+  };
+
+  const stopAutoRefresh = () => {
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
+    }
+  };
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      fetchOrders(); // Fetch instantly when user returns
+      startAutoRefresh();
+    } else {
+      stopAutoRefresh();
+    }
+  };
+
+  // On mount or when any filter changes
+  fetchOrders();
+  startAutoRefresh();
+
+  // Detect tab active / inactive
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("focus", handleVisibilityChange);
+  window.addEventListener("blur", stopAutoRefresh);
+
+  return () => {
+    stopAutoRefresh();
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.removeEventListener("focus", handleVisibilityChange);
+    window.removeEventListener("blur", stopAutoRefresh);
+  };
+
+}, [
+  currentPage,
+  statusFilter,
+  paymentFilter,
+  searchTerm,
+  dateFromFilter,
+  dateToFilter,
+  timeFromFilter,
+  timeToFilter,
+]);
+
 
   // Helper function to convert 24-hour time to 12-hour AM/PM format
   const formatTimeToAMPM = (time24) => {
-    if (!time24) return ""
-    const [hours, minutes] = time24.split(":")
-    let hour = parseInt(hours)
-    const ampm = hour >= 12 ? "PM" : "AM"
-    hour = hour % 12 || 12
-    return `${hour.toString().padStart(2, "0")}:${minutes} ${ampm}`
-  }
-
-  const stats = [
-    { label: "Total Products", value: "156", icon: "📦", color: "#001f3f" },
-    // { label: "Featured Products", value: "24", icon: "⭐", color: "#0074D9" },
-    { label: "Total Orders", value: "2,847", icon: "🛒", color: "#FF4136" },
-    // { label: "Revenue", value: "₹5.2L", icon: "💰", color: "#2ECC40" },
-  ]
-
-  const orders = [
-    { id: "#ORD001", customer: "Rajesh Kumar", date: "2024-01-15", time: "14:30", items: "3 items", amount: "₹8,500", payment: "UPI", status: "Completed" },
-    { id: "#ORD002", customer: "Priya Singh", date: "2024-01-14", time: "10:45", items: "5 items", amount: "₹12,000", payment: "Card", status: "Pending" },
-    { id: "#ORD003", customer: "Amit Patel", date: "2024-01-14", time: "16:20", items: "2 items", amount: "₹6,250", payment: "COD", status: "Completed" },
-    { id: "#ORD004", customer: "Sneha Gupta", date: "2024-01-13", time: "09:15", items: "4 items", amount: "₹9,800", payment: "UPI", status: "Processing" },
-    { id: "#ORD005", customer: "Vikram Sharma", date: "2024-01-13", time: "15:00", items: "1 item", amount: "₹3,200", payment: "Card", status: "Completed" },
-    { id: "#ORD006", customer: "Anjali Mehta", date: "2024-01-12", time: "11:30", items: "6 items", amount: "₹15,600", payment: "UPI", status: "Shipped" },
-    { id: "#ORD007", customer: "Rohit Jain", date: "2024-01-12", time: "13:45", items: "3 items", amount: "₹7,450", payment: "COD", status: "Pending" },
-    { id: "#ORD008", customer: "Kavita Rao", date: "2024-01-11", time: "08:20", items: "2 items", amount: "₹5,900", payment: "Card", status: "Completed" },
-    { id: "#ORD009", customer: "Deepak Verma", date: "2024-01-11", time: "17:10", items: "7 items", amount: "₹18,200", payment: "UPI", status: "Processing" },
-    { id: "#ORD010", customer: "Meera Iyer", date: "2024-01-10", time: "12:05", items: "4 items", amount: "₹11,300", payment: "UPI", status: "Shipped" },
-    { id: "#ORD011", customer: "Suresh Reddy", date: "2024-01-10", time: "14:50", items: "3 items", amount: "₹8,750", payment: "Card", status: "Completed" },
-    { id: "#ORD012", customer: "Poonam Singh", date: "2024-01-09", time: "10:30", items: "5 items", amount: "₹13,400", payment: "COD", status: "Pending" },
-    { id: "#ORD013", customer: "Arun Kumar", date: "2024-01-09", time: "16:40", items: "2 items", amount: "₹6,800", payment: "UPI", status: "Processing" },
-    { id: "#ORD014", customer: "Sunita Patel", date: "2024-01-08", time: "09:25", items: "6 items", amount: "₹16,900", payment: "Card", status: "Shipped" },
-    { id: "#ORD015", customer: "Manoj Tiwari", date: "2024-01-08", time: "13:15", items: "1 item", amount: "₹4,200", payment: "UPI", status: "Completed" },
-    { id: "#ORD016", customer: "Rekha Sharma", date: "2024-01-07", time: "11:00", items: "4 items", amount: "₹10,500", payment: "COD", status: "Pending" },
-    { id: "#ORD017", customer: "Vivek Gupta", date: "2024-01-07", time: "15:35", items: "3 items", amount: "₹7,800", payment: "Card", status: "Processing" },
-    { id: "#ORD018", customer: "Nisha Jain", date: "2024-01-06", time: "10:50", items: "5 items", amount: "₹14,200", payment: "UPI", status: "Shipped" },
-    { id: "#ORD019", customer: "Rajendra Prasad", date: "2024-01-06", time: "14:20", items: "2 items", amount: "₹6,400", payment: "UPI", status: "Completed" },
-    { id: "#ORD020", customer: "Kiran Desai", date: "2024-01-05", time: "12:45", items: "7 items", amount: "₹19,800", payment: "Card", status: "Pending" },
-    { id: "#ORD021", customer: "Alok Mishra", date: "2024-01-05", time: "09:30", items: "3 items", amount: "₹8,900", payment: "COD", status: "Processing" },
-    { id: "#ORD022", customer: "Shweta Agarwal", date: "2024-01-04", time: "16:15", items: "4 items", amount: "₹12,100", payment: "UPI", status: "Shipped" },
-    { id: "#ORD023", customer: "Pradeep Singh", date: "2024-01-04", time: "10:40", items: "2 items", amount: "₹5,700", payment: "Card", status: "Completed" },
-    { id: "#ORD024", customer: "Anita Choudhary", date: "2024-01-03", time: "13:50", items: "6 items", amount: "₹17,300", payment: "UPI", status: "Pending" },
-    { id: "#ORD025", customer: "Sanjay Kumar", date: "2024-01-03", time: "11:20", items: "1 item", amount: "₹3,800", payment: "COD", status: "Processing" }
-  ]
-
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
-      const matchesStatus = statusFilter === "" || order.status.toLowerCase() === statusFilter.toLowerCase()
-      const matchesPayment = paymentFilter === "" || order.payment.toLowerCase() === paymentFilter.toLowerCase()
-      const matchesSearch = searchTerm === "" ||
-        order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.id.toLowerCase().includes(searchTerm.toLowerCase())
-
-      // Date and Time filtering
-      const matchesDateFrom = dateFromFilter === "" || order.date >= dateFromFilter
-      const matchesDateTo = dateToFilter === "" || order.date <= dateToFilter
-      
-      const matchesTimeFrom = timeFromFilter === "" || order.time >= timeFromFilter
-      const matchesTimeTo = timeToFilter === "" || order.time <= timeToFilter
-
-      return matchesStatus && matchesPayment && matchesSearch && matchesDateFrom && matchesDateTo && matchesTimeFrom && matchesTimeTo
-    })
-  }, [orders, statusFilter, paymentFilter, searchTerm, dateFromFilter, dateToFilter, timeFromFilter, timeToFilter])
-
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentOrders = filteredOrders.slice(startIndex, endIndex)
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(":");
+    let hour = parseInt(hours);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
+    return `${hour.toString().padStart(2, "0")}:${minutes} ${ampm}`;
+  };
 
   const handleFilterChange = () => {
-    setCurrentPage(1) // Reset to first page when filters change
-  }
+    setCurrentPage(1); // Reset to first page when filters change
+  };
 
   const clearFilters = () => {
-    setStatusFilter("")
-    setPaymentFilter("")
-    setSearchTerm("")
-    setDateFromFilter("")
-    setDateToFilter("")
-    setTimeFromFilter("")
-    setTimeToFilter("")
-    setCurrentPage(1)
-  }
+    setStatusFilter("");
+    setPaymentFilter("");
+    setSearchTerm("");
+    setDateFromFilter("");
+    setDateToFilter("");
+    setTimeFromFilter("");
+    setTimeToFilter("");
+    setCurrentPage(1);
+  };
 
   const handlePrevious = () => {
     if (currentPage > 1) {
-      setCurrentPage(currentPage - 1)
+      setCurrentPage(currentPage - 1);
     }
-  }
+  };
 
   const handleNext = () => {
     if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1)
+      setCurrentPage(currentPage + 1);
     }
-  }
+  };
 
   return (
     <div className="dashboard-container">
@@ -115,14 +234,20 @@ export default function Dashboard() {
       <div className="stats-grid">
         {stats.map((stat, index) => (
           <div key={index} className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: stat.color + "15" }}>
+            <div
+              className="stat-icon"
+              style={{ backgroundColor: stat.color + "15" }}
+            >
               {stat.icon}
             </div>
             <div className="stat-content">
               <p className="stat-label">{stat.label}</p>
               <h3 className="stat-value">{stat.value}</h3>
             </div>
-            <div className="stat-border" style={{ borderTopColor: stat.color }}></div>
+            <div
+              className="stat-border"
+              style={{ borderTopColor: stat.color }}
+            ></div>
           </div>
         ))}
       </div>
@@ -142,8 +267,8 @@ export default function Dashboard() {
                   placeholder="Search by Order ID or Customer..."
                   value={searchTerm}
                   onChange={(e) => {
-                    setSearchTerm(e.target.value)
-                    handleFilterChange()
+                    setSearchTerm(e.target.value);
+                    handleFilterChange();
                   }}
                   className="filter-input"
                 />
@@ -155,14 +280,15 @@ export default function Dashboard() {
                   id="status"
                   value={statusFilter}
                   onChange={(e) => {
-                    setStatusFilter(e.target.value)
-                    handleFilterChange()
+                    setStatusFilter(e.target.value);
+                    handleFilterChange();
                   }}
                   className="filter-select"
                 >
                   <option value="">All Status</option>
                   <option value="completed">Completed</option>
                   <option value="pending">Pending</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
 
@@ -172,8 +298,8 @@ export default function Dashboard() {
                   id="payment"
                   value={paymentFilter}
                   onChange={(e) => {
-                    setPaymentFilter(e.target.value)
-                    handleFilterChange()
+                    setPaymentFilter(e.target.value);
+                    handleFilterChange();
                   }}
                   className="filter-select"
                 >
@@ -184,10 +310,7 @@ export default function Dashboard() {
                 </select>
               </div>
 
-              <button
-                onClick={clearFilters}
-                className="clear-filters-btn"
-              >
+              <button onClick={clearFilters} className="clear-filters-btn">
                 Clear Filters
               </button>
             </div>
@@ -201,8 +324,8 @@ export default function Dashboard() {
                   id="dateFrom"
                   value={dateFromFilter}
                   onChange={(e) => {
-                    setDateFromFilter(e.target.value)
-                    handleFilterChange()
+                    setDateFromFilter(e.target.value);
+                    handleFilterChange();
                   }}
                   className="filter-input"
                 />
@@ -215,8 +338,8 @@ export default function Dashboard() {
                   id="dateTo"
                   value={dateToFilter}
                   onChange={(e) => {
-                    setDateToFilter(e.target.value)
-                    handleFilterChange()
+                    setDateToFilter(e.target.value);
+                    handleFilterChange();
                   }}
                   className="filter-input"
                 />
@@ -229,8 +352,8 @@ export default function Dashboard() {
                   id="timeFrom"
                   value={timeFromFilter}
                   onChange={(e) => {
-                    setTimeFromFilter(e.target.value)
-                    handleFilterChange()
+                    setTimeFromFilter(e.target.value);
+                    handleFilterChange();
                   }}
                   className="filter-input"
                 />
@@ -243,8 +366,8 @@ export default function Dashboard() {
                   id="timeTo"
                   value={timeToFilter}
                   onChange={(e) => {
-                    setTimeToFilter(e.target.value)
-                    handleFilterChange()
+                    setTimeToFilter(e.target.value);
+                    handleFilterChange();
                   }}
                   className="filter-input"
                 />
@@ -252,70 +375,96 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="orders-table-container">
-            <table className="orders-table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Items</th>
-                <th>Amount</th>
-                <th>Payment</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentOrders.map((order, index) => {
-                // Only display orders with Completed or Pending status
-                if (order.status.toLowerCase() !== "completed" && order.status.toLowerCase() !== "pending") {
-                  return null
-                }
-                return (
-                  <tr key={index}>
-                    <td>{order.id}</td>
-                    <td>{order.customer}</td>
-                    <td>{order.date}</td>
-                    <td>{formatTimeToAMPM(order.time)}</td>
-                    <td>{order.items}</td>
-                    <td>{order.amount}</td>
-                    <td>{order.payment}</td>
-                    <td>
-                      <span className={`status-badge ${order.status.toLowerCase()}`}>
-                        {order.status}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-            </table>
-          </div>
+          {error && (
+            <div
+              className="error-message"
+              style={{ color: "red", padding: "10px", textAlign: "center" }}
+            >
+              {error}
+            </div>
+          )}
 
-          <div className="pagination-controls">
-            <button
-              className="pagination-btn"
-              onClick={handlePrevious}
-              disabled={currentPage === 1}
+          {loading ? (
+            <div
+              className="loading-message"
+              style={{ textAlign: "center", padding: "20px" }}
             >
-              Previous
-            </button>
-            <span className="pagination-info">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              className="pagination-btn"
-              onClick={handleNext}
-              disabled={currentPage === totalPages}
-            >
-              Next
-            </button>
-          </div>
+              Loading orders...
+            </div>
+          ) : (
+            <>
+              <div className="orders-table-container">
+                <table className="orders-table">
+                  <thead>
+                    <tr>
+                      <th>Order ID</th>
+                      <th>Customer</th>
+                      <th>Date</th>
+                      <th>Time</th>
+                      <th>Items</th>
+                      <th>Amount</th>
+                      <th>Payment</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="8"
+                          style={{ textAlign: "center", padding: "20px" }}
+                        >
+                          No orders found
+                        </td>
+                      </tr>
+                    ) : (
+                      orders.map((order, index) => (
+                        <tr key={index}>
+                          <td>{order.id}</td>
+                          <td>{order.customer}</td>
+                          <td>{order.date}</td>
+                          <td>{formatTimeToAMPM(order.time)}</td>
+                          <td>{order.items}</td>
+                          <td>{order.amount}</td>
+                          <td>{order.payment}</td>
+                          <td>
+                            <span
+                              className={`status-badge ${order.status.toLowerCase()}`}
+                            >
+                              {order.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="pagination-controls">
+                <button
+                  className="pagination-btn"
+                  onClick={handlePrevious}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </button>
+                <span className="pagination-info">
+                  Page {currentPage} of {totalPages || 1} ({totalOrders} total
+                  orders)
+                </span>
+                <button
+                  className="pagination-btn"
+                  onClick={handleNext}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  Next
+                </button>
+              </div>
+            </>
+          )}
         </div>
-
-       
       </div>
     </div>
-  )
+  );
 }

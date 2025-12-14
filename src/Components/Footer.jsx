@@ -62,12 +62,23 @@ function Footer() {
           <h4>Contact Info</h4>
           <p>Email: haniidustries@gmail.com</p>
           <p>Phone: +91 93427 08080</p> 
-          <p>Address: Plot No:44, 
-                          Vaishnavi nagar
-                          Thimmavaram
-                          Chengalpattu
-                         <br /> 
-                          603101 </p>
+          <p>
+            <a 
+              href="https://www.google.com/maps/place/12%C2%B043'01.6%22N+79%C2%B057'36.3%22E/@12.7170976,79.9575149,809m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d12.7170976!4d79.9600898?entry=ttu&g_ep=EgoyMDI1MTIwOS4wIKXMDSoKLDEwMDc5MjA3M0gBUAM%3D" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="address-link"
+            >
+              📍 Address: Plot No:44, 
+                              Vaishnavi nagar
+                              Thimmavaram
+                              Chengalpattu
+                             <br /> 
+                              603101
+              <br />
+              <span className="map-hint">(Click to view on map)</span>
+            </a>
+          </p>
         </div>
       </div>
 

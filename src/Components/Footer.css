@@ -80,6 +80,37 @@
   margin-bottom: 10px;
 }
 
+.address-link {
+  color: rgba(255, 255, 255, 0.8) !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  display: inline-block;
+  transition: all 0.3s ease;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.address-link:hover {
+  color: var(--primary-yellow) !important;
+  background-color: rgba(255, 255, 255, 0.1);
+  text-decoration: underline !important;
+  transform: scale(1.02);
+}
+
+.map-hint {
+  font-size: 12px;
+  color: var(--primary-yellow);
+  font-style: italic;
+  opacity: 0.9;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.address-link:hover .map-hint {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 .footer-bottom {
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   padding-top: 20px;
