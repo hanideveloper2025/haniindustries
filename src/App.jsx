@@ -13,6 +13,7 @@ import PrivateRoute from "./Components/Admin/PrivateRoute"
 import Contact from "./Components/Contact"
 import ScrollToTop from "./Components/ScrollToTop"
 import Terms from "./Components/Terms"
+import RefundCancellation from "./Components/RefundCancellation"
 import "./App.css"
 
 function App() {
@@ -116,6 +117,18 @@ function App() {
                 <Header />
                 <main>
                   <Terms />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          <Route
+            path="/refund-cancellation"
+            element={
+              <>
+                <Header />
+                <main>
+                  <RefundCancellation />
                 </main>
                 <Footer />
               </>

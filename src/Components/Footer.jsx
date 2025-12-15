@@ -29,7 +29,7 @@ function Footer() {
               <Link to="/terms">Terms and Conditions</Link>
             </li>
             <li>
-              <Link to="/">FACTORY LOCATION</Link>
+              <Link to="/refund-cancellation">Refund and Cancellation</Link>
             </li>
             <li>
               <Link to="/">Privacy Policy</Link>
