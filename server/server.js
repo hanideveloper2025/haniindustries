@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const bodyParser = require("body-parser");
 const app = express();
 const { supabase, testSupabaseConnection } = require("./config/supabaseClient");
 
@@ -55,7 +56,23 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+// ✅ RAW body ONLY for Cashfree webhook (must be before express.json)
+app.use(
+  "/api/payments/cashfree/webhook",
+  bodyParser.raw({ type: "application/json" })
+);
+
+// ✅ Capture raw body for signature verification
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/payments/cashfree/webhook" && Buffer.isBuffer(req.body)) {
+    req.rawBody = req.body.toString("utf8");
+  }
+  next();
+});
+
+// ✅ Normal JSON parsing for all other routes
 app.use(express.json());
+
 
 const PORT = process.env.PORT;
 
