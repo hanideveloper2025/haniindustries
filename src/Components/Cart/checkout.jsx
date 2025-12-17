@@ -8,15 +8,15 @@ import "./checkout.css";
 const TEST = import.meta.env.VITE_TEST;
 const MAIN = import.meta.env.VITE_MAIN;
 
-// Load Razorpay script
-const loadRazorpayScript = () => {
+// Load Cashfree SDK
+const loadCashfreeScript = () => {
   return new Promise((resolve) => {
-    if (window.Razorpay) {
+    if (window.Cashfree) {
       resolve(true);
       return;
     }
     const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
     script.onload = () => resolve(true);
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
@@ -56,7 +56,7 @@ function CheckoutPage() {
   const shipping = subtotal > 500 ? 0 : 100;
   const total = subtotal + tax + shipping;
 
-  // Convert to paise for Razorpay
+  // Convert to paise for payment gateway
   const amountsInPaise = {
     subtotal: Math.round(subtotal * 100),
     tax: Math.round(tax * 100),
@@ -134,103 +134,128 @@ function CheckoutPage() {
     sessionStorage.removeItem("cartTimestamp");
   };
 
-  // Open Razorpay checkout
-  const openRazorpayCheckout = async (orderData) => {
-    const loaded = await loadRazorpayScript();
+  // Open Cashfree checkout
+  const openCashfreeCheckout = async (orderData) => {
+    const loaded = await loadCashfreeScript();
     if (!loaded) {
       alert("Failed to load payment gateway. Please try again.");
       setIsProcessing(false);
       return;
     }
 
-    const options = {
-      key: orderData.razorpayKeyId,
-      amount: orderData.amount,
-      currency: orderData.currency,
-      name: "Hani Industries",
-      description: `Order ${orderData.orderId}`,
-      order_id: orderData.razorpayOrderId,
-      prefill: {
-        name: orderData.customerName,
-        email: orderData.customerEmail,
-        contact: orderData.customerPhone,
-      },
-      theme: {
-        color: "#1a365d",
-      },
-      handler: async function (response) {
-        // Payment successful - verify on backend
-        try {
-          const verifyResponse = await fetch(`${MAIN}/api/orders/verify`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              orderDbId: orderData.orderDbId,
-              cartItems: cartItems,
-            }),
-          });
-
-          const verifyData = await verifyResponse.json();
-
-          if (verifyData.success) {
-            handleOrderSuccess({
-              orderId: verifyData.data.orderId,
-              estimatedDelivery: orderData.estimatedDelivery,
-            });
-          } else {
-            alert("Payment verification failed. Please contact support.");
-          }
-        } catch (error) {
-          console.error("Verification error:", error);
-          alert("Payment verification error. Please contact support.");
-        }
-        setIsProcessing(false);
-      },
-      modal: {
-        ondismiss: async function () {
-          // Payment cancelled
-          try {
-            await fetch(`${MAIN}/api/orders/failed`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_order_id: orderData.razorpayOrderId,
-                error_description: "Payment cancelled by user",
-                orderDbId: orderData.orderDbId,
-              }),
-            });
-          } catch (error) {
-            console.error("Failed to record cancellation:", error);
-          }
-          setIsProcessing(false);
-        },
-      },
-    };
-
-    const razorpay = new window.Razorpay(options);
-
-    razorpay.on("payment.failed", async function (response) {
-      try {
-        await fetch(`${MAIN}/api/orders/failed`, {
+    try {
+      // Step 1: Create Cashfree order on backend
+      const cashfreeResponse = await fetch(
+        `${MAIN}/api/payments/cashfree/create-order`,
+        {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            razorpay_order_id: orderData.razorpayOrderId,
-            error_description: response.error.description,
             orderDbId: orderData.orderDbId,
+            amount: orderData.amount,
+            currency: orderData.currency,
+            customerDetails: {
+              name: orderData.customerName,
+              email: orderData.customerEmail,
+              phone: orderData.customerPhone,
+            },
           }),
-        });
-      } catch (error) {
-        console.error("Failed to record failure:", error);
-      }
-      alert(`Payment failed: ${response.error.description}`);
-      setIsProcessing(false);
-    });
+        }
+      );
 
-    razorpay.open();
+      const cashfreeData = await cashfreeResponse.json();
+
+      if (!cashfreeData.success) {
+        alert(cashfreeData.message || "Failed to initiate payment");
+        setIsProcessing(false);
+        return;
+      }
+
+      const { payment_session_id, cashfree_order_id } = cashfreeData.data;
+
+      // Step 2: Initialize Cashfree SDK
+      const cashfree = await window.Cashfree({
+        mode: "sandbox", // Change to "production" for live
+      });
+
+      // Step 3: Open Cashfree payment modal
+      const checkoutOptions = {
+        paymentSessionId: payment_session_id,
+        redirectTarget: "_modal", // Opens in modal
+      };
+
+      cashfree.checkout(checkoutOptions).then((result) => {
+        if (result.error) {
+          // Payment failed
+          console.error("Payment failed:", result.error);
+          alert(`Payment failed: ${result.error.message || "Unknown error"}`);
+          setIsProcessing(false);
+        } else if (result.paymentDetails) {
+          // Payment initiated, check status via polling
+          console.log("Payment initiated:", result.paymentDetails);
+          pollPaymentStatus(cashfree_order_id, orderData);
+        }
+      });
+    } catch (error) {
+      console.error("Cashfree checkout error:", error);
+      alert("Failed to process payment. Please try again.");
+      setIsProcessing(false);
+    }
+  };
+
+  // Poll payment status
+  const pollPaymentStatus = async (cashfreeOrderId, orderData) => {
+    let attempts = 0;
+    const maxAttempts = 20; // Poll for 1 minute (20 * 3 seconds)
+
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(
+          `${MAIN}/api/payments/cashfree/status/${cashfreeOrderId}`
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          const { payment_status, order_status } = data.data;
+
+          if (payment_status === "captured" && order_status === "confirmed") {
+            // Payment successful
+            handleOrderSuccess({
+              orderId: data.data.order_id,
+              estimatedDelivery: orderData.estimatedDelivery,
+            });
+            return;
+          } else if (payment_status === "failed") {
+            // Payment failed
+            alert("Payment failed. Please try again.");
+            setIsProcessing(false);
+            return;
+          }
+        }
+
+        // Continue polling if payment is pending
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 3000); // Check every 3 seconds
+        } else {
+          // Timeout - ask user to check order status
+          alert(
+            "Payment status is pending. Please check your order status in a few minutes."
+          );
+          setIsProcessing(false);
+        }
+      } catch (error) {
+        console.error("Status check error:", error);
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 3000);
+        } else {
+          setIsProcessing(false);
+        }
+      }
+    };
+
+    checkStatus();
   };
 
   // Handle place order
@@ -314,8 +339,8 @@ function CheckoutPage() {
         handleOrderSuccess(data.data);
         setIsProcessing(false);
       } else {
-        // Online payment - Open Razorpay
-        openRazorpayCheckout(data.data);
+        // Online payment - Open Cashfree
+        openCashfreeCheckout(data.data);
       }
     } catch (error) {
       console.error("Order error:", error);
@@ -625,7 +650,7 @@ function CheckoutPage() {
               </label>
             </div>
 
-            {/* Online Payment (Razorpay) */}
+            {/* Online Payment (UPI & Cards Only) */}
             <div className="payment-option">
               <input
                 type="radio"
@@ -640,15 +665,14 @@ function CheckoutPage() {
                   <span className="payment-title">💳 Pay Online</span>
                   <span className="payment-badge-secure">🔒 Secure</span>
                 </div>
-                <p className="payment-desc">
-                  UPI, Credit/Debit Card, Net Banking, Wallets
-                </p>
+                <p className="payment-desc">UPI & Credit/Debit Card payments</p>
                 <div className="payment-logos">
                   <span className="payment-logo">GPay</span>
                   <span className="payment-logo">PhonePe</span>
-                  <span className="payment-logo">Paytm</span>
+                  <span className="payment-logo">Paytm UPI</span>
                   <span className="payment-logo">VISA</span>
                   <span className="payment-logo">Mastercard</span>
+                  <span className="payment-logo">RuPay</span>
                 </div>
               </label>
             </div>

@@ -70,6 +70,9 @@ app.use("/api/home", require("./routes/public/homeRoutes"));
 // Order Routes (Razorpay Integration)
 app.use("/api/orders", require("./routes/public/orderRoutes"));
 
+// Cashfree Payment Routes
+app.use("/api/payments/cashfree", require("./routes/public/cashfreeRoutes"));
+
 // Contact Routes
 app.use("/api/contact", require("./routes/public/contactRoutes"));
 
