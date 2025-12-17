@@ -26,6 +26,28 @@ const createCashfreeOrder = async (req, res) => {
       });
     }
 
+    // Log environment variables (mask secrets)
+    console.log("Cashfree Config Check:");
+    console.log(
+      "- APP_ID:",
+      CASHFREE_APP_ID ? `${CASHFREE_APP_ID.substring(0, 10)}...` : "MISSING"
+    );
+    console.log(
+      "- SECRET_KEY:",
+      CASHFREE_SECRET_KEY
+        ? `${CASHFREE_SECRET_KEY.substring(0, 10)}...`
+        : "MISSING"
+    );
+    console.log("- BASE_URL:", CASHFREE_BASE_URL || "MISSING");
+
+    if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY || !CASHFREE_BASE_URL) {
+      console.error("❌ Cashfree credentials are not configured properly");
+      return res.status(500).json({
+        success: false,
+        message: "Payment gateway configuration error",
+      });
+    }
+
     const cashfreeOrderId = generateCashfreeOrderId();
 
     const payload = {
@@ -49,6 +71,7 @@ const createCashfreeOrder = async (req, res) => {
     const response = await fetch(`${CASHFREE_BASE_URL}/pg/orders`, {
       method: "POST",
       headers: {
+        Accept: "application/json",
         "Content-Type": "application/json",
         "x-client-id": CASHFREE_APP_ID,
         "x-client-secret": CASHFREE_SECRET_KEY,
@@ -60,13 +83,18 @@ const createCashfreeOrder = async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("❌ Cashfree create order failed:", data);
+      console.error("❌ Cashfree create order failed:");
+      console.error("Status:", response.status);
+      console.error("Response:", JSON.stringify(data, null, 2));
+      console.error("Request payload:", JSON.stringify(payload, null, 2));
       return res.status(response.status).json({
         success: false,
         message: "Cashfree order creation failed",
         error: data,
       });
     }
+
+    console.log("✅ Cashfree order created successfully:", cashfreeOrderId);
 
     // Update payment record
     await supabase
@@ -88,7 +116,7 @@ const createCashfreeOrder = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Create Cashfree order error:", error);
+    console.error("Create order error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
