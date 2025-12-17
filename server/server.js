@@ -64,7 +64,10 @@ app.use(
 
 // ✅ Capture raw body for signature verification
 app.use((req, res, next) => {
-  if (req.originalUrl === "/api/payments/cashfree/webhook" && Buffer.isBuffer(req.body)) {
+  if (
+    req.originalUrl === "/api/payments/cashfree/webhook" &&
+    Buffer.isBuffer(req.body)
+  ) {
     req.rawBody = req.body.toString("utf8");
   }
   next();
@@ -72,7 +75,6 @@ app.use((req, res, next) => {
 
 // ✅ Normal JSON parsing for all other routes
 app.use(express.json());
-
 
 const PORT = process.env.PORT;
 
@@ -84,7 +86,7 @@ app.get("/", (req, res) => {
 // Public Routes (Homepage, Products)
 app.use("/api/home", require("./routes/public/homeRoutes"));
 
-// Order Routes (Razorpay Integration)
+// Order Routes (Cashfree Integration)
 app.use("/api/orders", require("./routes/public/orderRoutes"));
 
 // Cashfree Payment Routes

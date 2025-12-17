@@ -184,16 +184,52 @@ function CheckoutPage() {
         redirectTarget: "_modal", // Opens in modal
       };
 
-      cashfree.checkout(checkoutOptions).then((result) => {
+      cashfree.checkout(checkoutOptions).then(async (result) => {
         if (result.error) {
           // Payment failed
           console.error("Payment failed:", result.error);
           alert(`Payment failed: ${result.error.message || "Unknown error"}`);
           setIsProcessing(false);
         } else if (result.paymentDetails) {
-          // Payment initiated, check status via polling
-          console.log("Payment initiated:", result.paymentDetails);
-          pollPaymentStatus(cashfree_order_id, orderData);
+          // Payment completed, verify on backend
+          console.log("Payment completed:", result.paymentDetails);
+
+          try {
+            // Verify payment with backend
+            const verifyResponse = await fetch(`${MAIN}/api/orders/verify`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                cashfree_order_id: cashfree_order_id,
+                orderDbId: orderData.orderDbId,
+                cartItems: cartItems.map((item) => ({
+                  productId: item.productId,
+                  name: item.name,
+                  size: item.size,
+                  quantity: item.quantity,
+                })),
+              }),
+            });
+
+            const verifyData = await verifyResponse.json();
+
+            if (verifyData.success) {
+              // Payment verified successfully
+              handleOrderSuccess({
+                orderId: verifyData.data.orderId,
+                estimatedDelivery:
+                  verifyData.data.estimatedDelivery ||
+                  orderData.estimatedDelivery,
+              });
+            } else {
+              alert(verifyData.message || "Payment verification failed");
+              setIsProcessing(false);
+            }
+          } catch (error) {
+            console.error("Payment verification error:", error);
+            alert("Failed to verify payment. Please contact support.");
+            setIsProcessing(false);
+          }
         }
       });
     } catch (error) {

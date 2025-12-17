@@ -1,14 +1,16 @@
 const { supabase } = require("../../config/supabaseClient");
-const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const { sendOrderEmails } = require("../../utils/emailService");
 const { sendWhatsAppOrderNotification } = require("../../utils/sendWhatsApp");
 
-// Initialize Razorpay
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// Cashfree Configuration
+const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
+const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY;
+const CASHFREE_BASE_URL = process.env.CASHFREE_BASE_URL;
+
+// Generate unique Cashfree order ID
+const generateCashfreeOrderId = () =>
+  `CF_ORDER_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 // Generate unique order ID
 const generateOrderId = async () => {
@@ -350,27 +352,64 @@ const createOrder = async (req, res) => {
         },
       });
     } else {
-      // Create Razorpay order for online payment
-      const razorpayOrder = await razorpay.orders.create({
-        amount: amounts.total, // Amount in paise
-        currency: "INR",
-        receipt: orderId,
-        notes: {
-          order_id: orderId,
+      // Create Cashfree order for online payment
+      const cashfreeOrderId = generateCashfreeOrderId();
+
+      const payload = {
+        order_id: cashfreeOrderId,
+        order_amount: (amounts.total / 100).toFixed(2),
+        order_currency: "INR",
+        customer_details: {
+          customer_id: `CUST_${order.id}`,
+          customer_name: `${customerDetails.firstName} ${customerDetails.lastName}`,
           customer_email: customerDetails.email,
+          customer_phone: customerDetails.phone,
         },
+        order_meta: {
+          return_url: `${process.env.FRONTEND_URL}/checkout?order_id=${cashfreeOrderId}`,
+        },
+        order_note: "Order from Hani Industries",
+      };
+
+      const response = await fetch(`${CASHFREE_BASE_URL}/pg/orders`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "x-client-id": CASHFREE_APP_ID,
+          "x-client-secret": CASHFREE_SECRET_KEY,
+          "x-api-version": "2023-08-01",
+        },
+        body: JSON.stringify(payload),
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Cashfree API Error:", data);
+        // Rollback order
+        await supabase.from("orders").delete().eq("id", order.id);
+        return res.status(response.status).json({
+          success: false,
+          message: "Payment gateway error",
+          error: data,
+        });
+      }
 
       // Create payment record
       const { data: payment, error: paymentError } = await supabase
         .from("payments")
         .insert({
           order_id: order.id,
-          payment_method: "razorpay",
-          razorpay_order_id: razorpayOrder.id,
+          payment_method: "cashfree",
+          razorpay_order_id: cashfreeOrderId,
           amount: amounts.total,
           currency: "INR",
           payment_status: "pending",
+          payment_response: {
+            cashfree_order_id: cashfreeOrderId,
+            payment_session_id: data.payment_session_id,
+          },
         })
         .select()
         .single();
@@ -384,19 +423,19 @@ const createOrder = async (req, res) => {
         payment_id: payment?.id,
         event_type: "order_created",
         event_data: {
-          razorpay_order_id: razorpayOrder.id,
+          cashfree_order_id: cashfreeOrderId,
           amount: amounts.total,
         },
       });
 
       return res.status(201).json({
         success: true,
-        message: "Razorpay order created",
+        message: "Cashfree order created",
         data: {
           orderId: orderId,
           orderDbId: order.id,
-          razorpayOrderId: razorpayOrder.id,
-          razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+          cashfreeOrderId: cashfreeOrderId,
+          paymentSessionId: data.payment_session_id,
           amount: amounts.total,
           currency: "INR",
           customerName: `${customerDetails.firstName} ${customerDetails.lastName}`,
@@ -412,7 +451,7 @@ const createOrder = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Create order error:", error);
+    console.error("Create order error:", error.message);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -421,55 +460,54 @@ const createOrder = async (req, res) => {
   }
 };
 
-// Verify Razorpay Payment
+// Verify Cashfree Payment (Check payment status)
 const verifyPayment = async (req, res) => {
   try {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      orderDbId,
-      cartItems,
-    } = req.body;
+    const { cashfree_order_id, orderDbId, cartItems } = req.body;
 
-    // Verify signature
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(body.toString())
-      .digest("hex");
+    // Get payment status from Cashfree API
+    const response = await fetch(
+      `${CASHFREE_BASE_URL}/pg/orders/${cashfree_order_id}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "x-client-id": CASHFREE_APP_ID,
+          "x-client-secret": CASHFREE_SECRET_KEY,
+          "x-api-version": "2023-08-01",
+        },
+      }
+    );
 
-    const isAuthentic = expectedSignature === razorpay_signature;
+    const orderStatus = await response.json();
 
-    if (!isAuthentic) {
-      // Update payment status to failed
-      await supabase
-        .from("payments")
-        .update({
-          payment_status: "failed",
-          payment_response: { error: "Signature verification failed" },
-        })
-        .eq("razorpay_order_id", razorpay_order_id);
-
+    if (!response.ok) {
+      console.error("Cashfree verification failed:", orderStatus);
       return res.status(400).json({
         success: false,
         message: "Payment verification failed",
+        error: orderStatus,
       });
     }
 
-    // Get payment details from Razorpay
-    const paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
+    // Check if payment is successful
+    if (orderStatus.order_status !== "PAID") {
+      return res.status(400).json({
+        success: false,
+        message: "Payment not completed",
+        status: orderStatus.order_status,
+      });
+    }
 
     // Update payment record
     const { data: payment, error: paymentError } = await supabase
       .from("payments")
       .update({
-        razorpay_payment_id: razorpay_payment_id,
-        razorpay_signature: razorpay_signature,
+        razorpay_payment_id: orderStatus.cf_order_id,
         payment_status: "captured",
-        payment_response: paymentDetails,
+        payment_response: orderStatus,
       })
-      .eq("razorpay_order_id", razorpay_order_id)
+      .eq("razorpay_order_id", cashfree_order_id)
       .select()
       .single();
 
@@ -488,9 +526,9 @@ const verifyPayment = async (req, res) => {
       payment_id: payment?.id,
       event_type: "payment_success",
       event_data: {
-        razorpay_payment_id,
-        razorpay_order_id,
-        method: paymentDetails.method,
+        cashfree_order_id: cashfree_order_id,
+        cf_order_id: orderStatus.cf_order_id,
+        payment_amount: orderStatus.order_amount,
       },
     });
 
@@ -543,7 +581,7 @@ const verifyPayment = async (req, res) => {
         taxAmount: order.tax_amount,
         shippingAmount: order.shipping_amount,
         totalAmount: order.total_amount,
-        paymentMethod: "razorpay",
+        paymentMethod: "cashfree",
         estimatedDelivery: order.estimated_delivery,
         orderDate: order.created_at,
       };
@@ -564,7 +602,7 @@ const verifyPayment = async (req, res) => {
       message: "Payment verified successfully",
       data: {
         orderId: order?.order_id,
-        paymentId: razorpay_payment_id,
+        paymentId: cashfree_order_id,
         estimatedDelivery: order?.estimated_delivery,
       },
     });
@@ -581,7 +619,7 @@ const verifyPayment = async (req, res) => {
 // Payment Failed Handler
 const paymentFailed = async (req, res) => {
   try {
-    const { razorpay_order_id, error_description, orderDbId } = req.body;
+    const { cashfree_order_id, error_description, orderDbId } = req.body;
 
     // Update payment status
     await supabase
@@ -590,7 +628,7 @@ const paymentFailed = async (req, res) => {
         payment_status: "failed",
         payment_response: { error: error_description },
       })
-      .eq("razorpay_order_id", razorpay_order_id);
+      .eq("razorpay_order_id", cashfree_order_id);
 
     // Update order status
     await supabase
@@ -602,7 +640,7 @@ const paymentFailed = async (req, res) => {
     const { data: payment } = await supabase
       .from("payments")
       .select("id")
-      .eq("razorpay_order_id", razorpay_order_id)
+      .eq("razorpay_order_id", cashfree_order_id)
       .single();
 
     if (payment) {
@@ -732,5 +770,4 @@ module.exports = {
   verifyPayment,
   paymentFailed,
   getOrderDetails,
-  razorpayWebhook,
 };
