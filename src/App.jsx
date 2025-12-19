@@ -14,6 +14,10 @@ import Contact from "./Components/Contact"
 import ScrollToTop from "./Components/ScrollToTop"
 import Terms from "./Components/Terms"
 import RefundCancellation from "./Components/RefundCancellation"
+import AboutUs from "./Components/AboutUs"
+import PrivacyPolicy from "./Components/PrivacyPolicy"
+import FAQ from "./Components/FAQ"
+import DeliveryPolicy from "./Components/DeliveryPolicy"
 import "./App.css"
 
 function App() {
@@ -129,6 +133,54 @@ function App() {
                 <Header />
                 <main>
                   <RefundCancellation />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          <Route
+            path="/about-us"
+            element={
+              <>
+                <Header />
+                <main>
+                  <AboutUs />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          <Route
+            path="/privacy-policy"
+            element={
+              <>
+                <Header />
+                <main>
+                  <PrivacyPolicy />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          <Route
+            path="/faq"
+            element={
+              <>
+                <Header />
+                <main>
+                  <FAQ />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          <Route
+            path="/delivery-policy"
+            element={
+              <>
+                <Header />
+                <main>
+                  <DeliveryPolicy />
                 </main>
                 <Footer />
               </>

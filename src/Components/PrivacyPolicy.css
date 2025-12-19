@@ -1,0 +1,36 @@
+.privacy-container{
+    padding:40px 20px;max-width:900px;margin:40px auto;background:#fff;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.08)
+}
+.privacy-inner{
+    padding:28px
+}
+.privacy-inner h1{
+    font-size:28px;margin-bottom:8px;color:#001f3f
+}
+.privacy-inner h2{
+    margin-top:20px;color:#001f3f
+}
+.privacy-inner h3{
+    margin-top:14px;color:#070138
+}
+.privacy-inner p, .privacy-inner li{
+    color:#333;line-height:1.6
+}
+.last-updated{
+    color:#666;margin-bottom:12px
+}
+.privacy-inner ol, .privacy-inner ul{
+    margin-left:20px;margin-bottom:12px
+}
+.privacy-inner a{
+    color:#001f3f;text-decoration:none
+}
+.privacy-inner a:hover{
+    text-decoration:underline
+}
+@media (max-width:768px){
+    .privacy-container{
+        margin:20px;padding:16px
+    }
+
+}

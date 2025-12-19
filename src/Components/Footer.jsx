@@ -17,13 +17,13 @@ function Footer() {
           <h4>Quick Links</h4>
           <ul>
             <li>
-              <Link to="/">About Us</Link>
+              <Link to="/about-us">About Us</Link>
             </li>
             <li>
-              <Link to="/">Contact</Link>
+              <Link to="/contact">Contact</Link>
             </li>
             <li>
-              <Link to="/">FAQ</Link>
+              <Link to="/faq">FAQ</Link>
             </li>
             <li>
               <Link to="/terms">Terms and Conditions</Link>
@@ -32,10 +32,10 @@ function Footer() {
               <Link to="/refund-cancellation">Refund and Cancellation</Link>
             </li>
             <li>
-              <Link to="/">Privacy Policy</Link>
+              <Link to="/privacy-policy">Privacy Policy</Link>
             </li>
             <li>
-              <Link to="/">Blogs</Link>
+              <Link to="/delivery-policy">Delivery Policy</Link>
             </li>
           </ul>
         </div>
