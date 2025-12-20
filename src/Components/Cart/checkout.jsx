@@ -171,11 +171,11 @@ function CheckoutPage() {
         return;
       }
 
-      const { payment_session_id, cashfree_order_id } = cashfreeData.data;
+      const { payment_session_id, cf_order_id } = cashfreeData.data;
 
-      // Step 2: Initialize Cashfree SDK
-      const cashfree = await window.Cashfree({
-        mode: "sandbox", // Change to "production" for live
+
+      const cashfree = window.Cashfree({
+        mode: "production",
       });
 
       // Step 3: Open Cashfree payment modal
