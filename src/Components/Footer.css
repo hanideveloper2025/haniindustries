@@ -153,6 +153,7 @@
 /* Mobile Styles */
 @media (max-width: 480px) {
   .footer {
+    align-items: center;
     padding: 30px 12px 12px;
   }
 
