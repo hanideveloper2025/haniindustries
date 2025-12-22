@@ -606,10 +606,10 @@
 
 .search-btn {
   padding: 0.75rem 1.5rem;
-  background-color: #1976d2;
+  /* background-color: #1976d2; */
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 22px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
@@ -619,9 +619,9 @@
   gap: 0.5rem;
 }
 
-.search-btn:hover {
+/* .search-btn:hover {
   background-color: #1565c0;
-}
+} */
 
 .search-btn:active {
   transform: scale(0.98);

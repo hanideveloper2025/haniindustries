@@ -7,8 +7,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const COMPANY = {
   name: "Hani Industries",
   email: process.env.ADMIN_EMAIL,
-  phone: "+91 98765 43210",
-  address: "123 Industrial Area, Mumbai, Maharashtra 400001",
+  phone: "+91 93427 08080",
+  address: "Hani Industries Plot No:44, Vaishnavi nagar Thimmavaram Chengalpattu 603101",
   website: "https://hani-industries.in",
   logo: "https://hani-industries.in/logo.png",
 };

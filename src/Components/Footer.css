@@ -36,6 +36,8 @@
 .footer-logo img {
   width: 100%;
   height: auto;
+  display: block;
+  margin: 0 auto;
 }
 
 .footer-section ul {
@@ -163,6 +165,14 @@
     margin-bottom: 15px;
   }
 
+  .footer-section {
+    text-align: center;
+  }
+
+  .footer-section  {
+    position: center;
+  }
+
   .footer-section h3 {
     font-size: 14px;
   }
@@ -180,5 +190,9 @@
   .footer-bottom {
     font-size: 11px;
     padding-top: 15px;
+  }
+
+  .footer-logo {
+    align-self: center;
   }
 }

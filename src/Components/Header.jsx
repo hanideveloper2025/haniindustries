@@ -131,7 +131,7 @@ function Header() {
                 <img
                   src="/search.svg"
                   alt="Search"
-                  style={{ width: "1.5em", height: "1.5em" }}
+                  style={{width: "1em", height: "1em" }}
                 />
               </button>
             </form>
