@@ -18,6 +18,7 @@ import AboutUs from "./Components/AboutUs"
 import PrivacyPolicy from "./Components/PrivacyPolicy"
 import FAQ from "./Components/FAQ"
 import DeliveryPolicy from "./Components/DeliveryPolicy"
+import WhatsAppIcon from "./Components/WhatsAppIcon"
 import "./App.css"
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
     <CartProvider>
       <Router>
         <ScrollToTop />
+        <WhatsAppIcon />
         <Routes>
           {/* Admin Routes */}
           <Route path="/admin-login" element={<AdminLogin />} />

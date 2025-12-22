@@ -1,6 +1,8 @@
+import { useNavigate } from 'react-router-dom';
 import "./QualitySection.css"
 
 function QualitySection() {
+  const navigate = useNavigate();
   return (
     <section className="quality-section">
       <div className="quality-container">
@@ -15,7 +17,7 @@ function QualitySection() {
             food items with strict quality control and clean ingredients. 
             Perfectly designed to serve the needs of every Indian household.
           </p>
-          <button className="quality-btn">Explore More</button>
+          <button className="quality-btn" onClick={() => navigate('/collections')}>Explore More</button>
         </div>
       </div>
     </section>

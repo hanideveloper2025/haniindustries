@@ -258,6 +258,14 @@
   border-radius: 15px;
 }
 
+thead th {
+  text-align: left;
+  padding: 12px 15px;
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+}
+
 @media (max-width: 768px) {
   .product-form {
     padding: 1.5rem;
@@ -315,7 +323,7 @@
 }
 
 .products-table td {
-  color: #495057;
+  color: #4d535a;
 }
 
 .table-image {
