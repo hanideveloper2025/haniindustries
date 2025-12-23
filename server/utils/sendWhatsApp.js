@@ -1,157 +1,169 @@
 const axios = require("axios");
+const { supabase } = require("../config/supabaseClient");
 
-// Send WhatsApp OTP (existing function)
-async function sendWhatsAppOTP(number, otp) {
-  await axios.post(
-    `https://graph.facebook.com/v20.0/${process.env.META_PHONE_NUMBER_ID}/messages`,
-    {
-      messaging_product: "whatsapp",
-      to: number,
-      type: "template",
-      template: {
-        name: process.env.META_TEMPLATE_NAME,
-        language: { code: "en_US" },
-        components: [
-          { type: "body", parameters: [{ type: "text", text: otp }] },
-        ],
-      },
-    },
-    {
+const WHATSAPP_API_URL = `https://graph.facebook.com/v19.0/${process.env.META_PHONE_NUMBER_ID}/messages`;
+const ADMIN_PHONE = process.env.DUMMY_WHATSAPP_NUMBER;
+
+/* ----------------------------------------------------
+ *   Utility: 24-hour session check
+ * ---------------------------------------------------- */
+const isWithin24Hours = (lastTime) => {
+  if (!lastTime) return false;
+  return Date.now() - new Date(lastTime).getTime() < 24 * 60 * 60 * 1000;
+};
+
+/* ----------------------------------------------------
+ *   1️⃣ SESSION MESSAGE (TEXT)
+ * ---------------------------------------------------- */
+const sendTextMessage = async (order) => {
+  console.log("========== WHATSAPP TEXT DEBUG START ==========");
+  console.log("WHATSAPP API URL:", WHATSAPP_API_URL);
+  console.log("TO:", ADMIN_PHONE);
+  console.log("ORDER DATA:", order);
+
+  const payload = {
+    messaging_product: "whatsapp",
+    to: ADMIN_PHONE,
+    type: "text",
+    text: {
+      body:
+      `🆕 New Order Received!
+
+      🆔 Order ID: ${order.orderId}
+      💳 Payment Method: ${order.paymentMethod}
+      🔐 Transaction Ref: ${order.transactionId}
+
+      👤 Customer:
+      ${order.name}
+      ${order.phone}
+      ${order.email}
+
+      📍 Address:
+      ${order.address}
+
+      🛒 Items:
+      ${order.items}
+
+      💰 Total: ₹${order.totalAmount}
+
+      📍 Location:
+      ${order.locationLink}
+
+      Please process this order at the earliest.`
+    }
+  };
+
+  console.log("TEXT PAYLOAD:", JSON.stringify(payload, null, 2));
+
+  try {
+    const res = await axios.post(WHATSAPP_API_URL, payload, {
       headers: {
         Authorization: `Bearer ${process.env.META_WHATSAPP_TOKEN}`,
         "Content-Type": "application/json",
       },
-    }
-  );
-}
+    });
 
-// Format currency for WhatsApp message
-const formatCurrency = (amountInPaise) => {
-  return `₹${(amountInPaise / 100).toFixed(2)}`;
-};
-
-// Format date for WhatsApp message
-const formatDate = (dateString) => {
-  const options = {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  };
-  return new Date(dateString).toLocaleDateString("en-IN", options);
-};
-
-// Send WhatsApp Order Notification to Admin
-async function sendWhatsAppOrderNotification(orderData) {
-  try {
-    const {
-      orderId,
-      customerName,
-      customerPhone,
-      shippingAddress,
-      shippingCity,
-      shippingState,
-      shippingPostalCode,
-      items,
-      totalAmount,
-      paymentMethod,
-      orderDate,
-    } = orderData;
-
-    // Build items list
-    const itemsList = items
-      .map(
-        (item, index) =>
-          `${index + 1}. ${item.name} (${item.size}) x${
-            item.quantity
-          } - ${formatCurrency(item.totalPrice)}`
-      )
-      .join("\n");
-
-    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-    const paymentLabel =
-      paymentMethod === "cod" ? "💵 Cash on Delivery" : "✅ Paid Online";
-
-    // Professional WhatsApp Message Template
-    const message = `🔔 *NEW ORDER RECEIVED!*
-━━━━━━━━━━━━━━━━━━━━━
-
-📋 *Order ID:* ${orderId}
-📅 *Order Date:* ${formatDate(orderDate)}
-
-━━━━━━━━━━━━━━━━━━━━━
-👤 *CUSTOMER DETAILS*
-━━━━━━━━━━━━━━━━━━━━━
-*Name:* ${customerName}
-*Phone:* ${customerPhone}
-
-━━━━━━━━━━━━━━━━━━━━━
-📍 *DELIVERY ADDRESS*
-━━━━━━━━━━━━━━━━━━━━━
-${shippingAddress}
-${shippingCity}, ${shippingState}
-PIN: ${shippingPostalCode}
-
-━━━━━━━━━━━━━━━━━━━━━
-🛒 *ORDER ITEMS (${totalItems})*
-━━━━━━━━━━━━━━━━━━━━━
-${itemsList}
-
-━━━━━━━━━━━━━━━━━━━━━
-💰 *PAYMENT DETAILS*
-━━━━━━━━━━━━━━━━━━━━━
-*Method:* ${paymentLabel}
-*Total Amount:* *${formatCurrency(totalAmount)}*
-
-━━━━━━━━━━━━━━━━━━━━━
-${
-  paymentMethod === "cod"
-    ? "⚠️ *Collect payment on delivery*"
-    : "✅ *Payment already received*"
-}
-
-🏭 *Hani Industries*`;
-
-    // Send WhatsApp message using Meta API
-    const response = await axios.post(
-      `https://graph.facebook.com/v20.0/${process.env.META_PHONE_NUMBER_ID}/messages`,
-      {
-        messaging_product: "whatsapp",
-        to: process.env.ADMIN_WHATSAPP_NUMBER,
-        type: "text",
-        text: {
-          preview_url: false,
-          body: message,
-        },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.META_WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    console.log("✅ WhatsApp notification sent to admin:", response.data);
-    return {
-      success: true,
-      messageId: response.data?.messages?.[0]?.id,
-    };
-  } catch (error) {
-    console.error(
-      "❌ WhatsApp notification error:",
-      error.response?.data || error.message
-    );
-    return {
-      success: false,
-      error: error.response?.data || error.message,
-    };
+    console.log("✅ TEXT MESSAGE SUCCESS:", res.data);
+  } catch (err) {
+    console.error("❌ TEXT MESSAGE FAILED");
+    console.error("STATUS:", err.response?.status);
+    console.error("RESPONSE:", err.response?.data);
+    throw err;
   }
-}
+
+  console.log("========== WHATSAPP TEXT DEBUG END ==========");
+};
+
+/* ----------------------------------------------------
+ *   2️⃣ TEMPLATE MESSAGE
+ * ---------------------------------------------------- */
+const sendTemplateMessage = async (order) => {
+  console.log("========== WHATSAPP TEMPLATE DEBUG START ==========");
+  console.log("WHATSAPP API URL:", WHATSAPP_API_URL);
+  console.log("TO:", ADMIN_PHONE);
+  console.log("TEMPLATE NAME: order_confirmed_admin_alert");
+  console.log("LANGUAGE CODE: en");
+  console.log("ORDER DATA:", order);
+
+  const payload = {
+    messaging_product: "whatsapp",
+    to: ADMIN_PHONE,
+    type: "template",
+    template: {
+      name: "order_confirmed_admin_alert",
+      language: { code: "en" },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: order.orderId },
+            { type: "text", text: order.paymentMethod },
+            { type: "text", text: order.transactionId },
+            { type: "text", text: order.name },
+            { type: "text", text: order.phone },
+            { type: "text", text: order.email },
+            { type: "text", text: order.address },
+            { type: "text", text: order.items },
+            { type: "text", text: order.totalAmount },
+            { type: "text", text: order.locationLink }
+          ]
+        }
+      ]
+    }
+  };
+
+  console.log("TEMPLATE PAYLOAD:", JSON.stringify(payload, null, 2));
+
+  try {
+    const res = await axios.post(WHATSAPP_API_URL, payload, {
+      headers: {
+        Authorization: `Bearer ${process.env.META_WHATSAPP_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    console.log("✅ TEMPLATE MESSAGE SUCCESS:", res.data);
+  } catch (err) {
+    console.error("❌ TEMPLATE MESSAGE FAILED");
+    console.error("STATUS:", err.response?.status);
+    console.error("RESPONSE:", err.response?.data);
+    console.error("FB TRACE ID:", err.response?.headers?.["x-fb-trace-id"]);
+    throw err;
+  }
+
+  console.log("========== WHATSAPP TEMPLATE DEBUG END ==========");
+};
+
+/* ----------------------------------------------------
+ *   3️⃣ MAIN FUNCTION
+ * ---------------------------------------------------- */
+const sendOrderWhatsAppAlert = async (order) => {
+  console.log("========== WHATSAPP MAIN DEBUG START ==========");
+  console.log("ADMIN PHONE:", ADMIN_PHONE);
+
+  const { data, error } = await supabase
+  .from("whatsapp_sessions")
+  .select("last_user_message_time")
+  .eq("phone", ADMIN_PHONE)
+  .maybeSingle();
+
+  console.log("SUPABASE SESSION DATA:", data);
+
+  if (error) {
+    console.error("❌ Failed to fetch WhatsApp session:", error);
+  }
+
+  if (isWithin24Hours(data?.last_user_message_time)) {
+    console.log("📤 DECISION: SESSION (TEXT) MESSAGE");
+    await sendTextMessage(order);
+  } else {
+    console.log("📤 DECISION: TEMPLATE MESSAGE");
+    await sendTemplateMessage(order);
+  }
+
+  console.log("========== WHATSAPP MAIN DEBUG END ==========");
+};
 
 module.exports = {
-  sendWhatsAppOTP,
-  sendWhatsAppOrderNotification,
+  sendOrderWhatsAppAlert,
 };

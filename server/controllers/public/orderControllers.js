@@ -1,7 +1,7 @@
 const { supabase } = require("../../config/supabaseClient");
 const crypto = require("crypto");
 const { sendOrderEmails } = require("../../utils/emailService");
-const { sendWhatsAppOrderNotification } = require("../../utils/sendWhatsApp");
+const { sendOrderWhatsAppAlert } = require("../../utils/sendWhatsApp");
 
 // Cashfree Configuration
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
@@ -31,7 +31,7 @@ const generateOrderId = async () => {
 };
 
 // Create Order (COD or Razorpay)
-const createOrder = async (req, res) => {
+/*const createOrder = async (req, res) => {
   try {
     const {
       customerDetails,
@@ -102,7 +102,131 @@ const createOrder = async (req, res) => {
         stockErrors: stockErrors,
       });
     }
+*/
+const createOrder = async (req, res) => {
+  try {
+    console.log("\n========== CREATE ORDER DEBUG START ==========");
 
+    // 🔍 FULL REQUEST BODY
+    console.log("REQ.BODY:", JSON.stringify(req.body, null, 2));
+
+    const {
+      customerDetails,
+      shippingDetails,
+      cartItems,
+      paymentMethod,
+      amounts,
+    } = req.body;
+
+    // 🔍 INDIVIDUAL FIELD LOGS
+    console.log("customerDetails:", customerDetails);
+    console.log("shippingDetails:", shippingDetails);
+    console.log("cartItems:", cartItems);
+    console.log(
+      "cartItems length:",
+      Array.isArray(cartItems) ? cartItems.length : "NOT AN ARRAY"
+    );
+    console.log("paymentMethod:", paymentMethod);
+    console.log("amounts:", amounts);
+
+    // 🚨 SANITY CHECKS
+    if (!Array.isArray(cartItems)) {
+      console.error("❌ cartItems is NOT an array");
+    }
+
+    if (Array.isArray(cartItems) && cartItems.length === 0) {
+      console.error("❌ cartItems is EMPTY ARRAY");
+    }
+
+    // ===============================
+    // REQUIRED FIELD VALIDATION
+    // ===============================
+    if (
+      !customerDetails ||
+      !shippingDetails ||
+      !cartItems ||
+      !paymentMethod ||
+      !amounts
+    ) {
+      console.error("❌ Missing required fields");
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
+
+    // ============================================
+    // STEP 1: VALIDATE STOCK BEFORE CREATING ORDER
+    // ============================================
+    const stockErrors = [];
+
+    for (const item of cartItems) {
+      console.log("\n----- STOCK CHECK ITEM -----");
+      console.log("Item received:", item);
+      console.log("Product ID:", item.productId);
+      console.log("Size:", item.size);
+      console.log("Requested Quantity:", item.quantity);
+
+      // 🧱 CART ITEM STRUCTURE VALIDATION
+      if (!item.productId || !item.size || !item.quantity) {
+        console.error("❌ INVALID CART ITEM STRUCTURE:", item);
+        stockErrors.push({
+          itemName: item.name || "Unknown",
+          message: "Invalid cart item structure",
+        });
+        continue;
+      }
+
+      // 🔍 FETCH VARIANT STOCK
+      const { data: variant, error: variantError } = await supabase
+      .from("product_variants")
+      .select("stock")
+      .eq("product_id", item.productId)
+      .eq("size", item.size)
+      .single();
+
+      console.log("Variant DB result:", variant);
+      console.log("Variant Error:", variantError);
+
+      if (variantError || !variant) {
+        stockErrors.push({
+          itemName: item.name,
+          itemSize: item.size,
+          requestedQty: item.quantity,
+          availableStock: 0,
+          isOutOfStock: true,
+          message: "Product variant not found",
+        });
+        continue;
+      }
+
+      const availableStock = variant.stock || 0;
+      console.log("Available Stock:", availableStock);
+
+      if (item.quantity > availableStock) {
+        stockErrors.push({
+          itemName: item.name,
+          itemSize: item.size,
+          requestedQty: item.quantity,
+          availableStock,
+          isOutOfStock: availableStock === 0,
+        });
+      }
+    }
+
+    // ❌ STOCK VALIDATION FAILED
+    if (stockErrors.length > 0) {
+      console.error("\n❌ STOCK VALIDATION FAILED");
+      console.error("Stock Errors:", JSON.stringify(stockErrors, null, 2));
+
+      return res.status(400).json({
+        success: false,
+        message: "Stock validation failed",
+        stockErrors,
+      });
+    }
+
+    console.log("✅ STOCK VALIDATION PASSED");
     // ============================================
     // STEP 2: GENERATE ORDER ID
     // ============================================
@@ -331,9 +455,40 @@ const createOrder = async (req, res) => {
         console.error("Email sending failed:", err)
       );
 
+      // ===============================
+      // BUILD WHATSAPP DATA (COD)
+      // ===============================
+      const whatsappData = {
+        orderId: orderId,
+        paymentMethod: "COD",
+        transactionId: "N/A",
+
+        name: `${customerDetails.firstName} ${customerDetails.lastName}`,
+        phone: customerDetails.phone.startsWith("91")
+        ? customerDetails.phone
+        : `91${customerDetails.phone}`,
+
+        email: customerDetails.email,
+
+        address: `${shippingDetails.address}, ${shippingDetails.city}, ${shippingDetails.state} - ${shippingDetails.postalCode}`,
+
+        items: cartItems
+        .map(item => `${item.quantity}x ${item.name}`)
+        .join(", "),
+
+        totalAmount: (amounts.total / 100).toString(), // convert paise → INR
+
+        locationLink: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          `${shippingDetails.address}, ${shippingDetails.city}, ${shippingDetails.state} ${shippingDetails.postalCode}`
+        )}`
+
+
+      };
+
+
       // Send WhatsApp notification to admin (don't await - let it run in background)
-      sendWhatsAppOrderNotification(emailOrderData).catch((err) =>
-        console.error("WhatsApp notification failed:", err)
+      sendOrderWhatsAppAlert(whatsappData).catch(err =>
+      console.error("WhatsApp COD failed:", err)
       );
 
       return res.status(201).json({
@@ -592,8 +747,30 @@ const verifyPayment = async (req, res) => {
       );
 
       // Send WhatsApp notification to admin (don't await - let it run in background)
-      sendWhatsAppOrderNotification(emailOrderData).catch((err) =>
-        console.error("WhatsApp notification failed:", err)
+      const whatsappData = {
+        orderId: order.order_id,
+        paymentMethod: "Online",
+        transactionId: orderStatus.cf_order_id,
+
+        name: order.customer_name,
+        phone: order.customer_phone,
+        email: order.customer_email,
+
+        address: `${order.shipping_address}, ${order.shipping_city}, ${order.shipping_state} - ${order.shipping_postal_code}`,
+
+        items: (orderItemsData || [])
+        .map(item => `${item.quantity}x ${item.product_name}`)
+        .join(", "),
+
+        totalAmount: (order.total_amount / 100).toString(),
+        locationLink: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          `${order.shipping_address}, ${order.shipping_city}, ${order.shipping_state} ${order.shipping_postal_code}`
+        )}`
+
+      };
+
+      sendOrderWhatsAppAlert(whatsappData).catch(err =>
+      console.error("WhatsApp Online failed:", err)
       );
     }
 
