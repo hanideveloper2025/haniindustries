@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const app = express();
 const { supabase, testSupabaseConnection } = require("./config/supabaseClient");
+const whatsappWebhook = require("./utils/whatsappWebhook");
 
 // CORS configuration - add all your frontend domains here
 const allowedOrigins = [
@@ -56,6 +57,11 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+// ✅ Normal JSON parsing for all other routes
+app.use(express.json());
+
+const PORT = process.env.PORT;
+
 // ✅ RAW body ONLY for Cashfree webhook (must be before express.json)
 app.use(
   "/api/payments/cashfree/webhook",
@@ -73,10 +79,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ Normal JSON parsing for all other routes
-app.use(express.json());
 
-const PORT = process.env.PORT;
+// 👇 THIS LINE IS IMPORTANT FOR WHATSAPP MESSAGING
+app.use("/", whatsappWebhook);
+
+
 
 // Routes
 app.get("/", (req, res) => {
